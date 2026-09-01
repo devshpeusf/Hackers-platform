@@ -1,0 +1,477 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Mono:wght@400;700&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    a { color: #21e6c1; text-decoration: none; }
+    .font-pixel { font-family: 'Press Start 2P', 'Space Mono', monospace; }
+    .nav-row { cursor: pointer; transition: background 0.15s ease-out; }
+    .nav-row:hover { background: rgba(244,241,251,0.05) !important; }
+    .clickable { cursor: pointer; transition: transform 0.2s cubic-bezier(0.32,0.72,0,1); }
+    .clickable:hover { transform: translateY(-3px); }
+    .pixel-card {
+      position: relative;
+      --pc-border: #1a1530;
+      --pc-edge: rgba(244,241,251,0.06);
+      --pc-face: rgba(18,15,31,0.92);
+      background:
+        linear-gradient(135deg, var(--pc-edge) 0 12px, transparent 12px),
+        linear-gradient(315deg, color-mix(in srgb, var(--pc-border) 30%, transparent) 0 10px, transparent 10px),
+        var(--pc-face);
+      box-shadow:
+        0 -4px 0 0 var(--pc-border), 0 4px 0 0 var(--pc-border),
+        -4px 0 0 0 var(--pc-border), 4px 0 0 0 var(--pc-border),
+        inset 0 4px 0 0 var(--pc-edge), inset 0 -4px 0 0 rgba(7,6,13,0.45);
+    }
+    .pixel-chip {
+      display: inline-block; background: #07060d; padding: 6px 10px 5px;
+      font-family: 'Press Start 2P', monospace; font-size: 8px; letter-spacing: 0.1em;
+      box-shadow:
+        0 -2px 0 0 var(--chip-border, #1a1530), 0 2px 0 0 var(--chip-border, #1a1530),
+        -2px 0 0 0 var(--chip-border, #1a1530), 2px 0 0 0 var(--chip-border, #1a1530);
+    }
+    .hj-pixel-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;
+      background: #ff2e97; color: #07060d; font-weight: 700; border: none;
+      box-shadow:
+        0 -4px 0 0 #ff2e97, 0 4px 0 0 #ff2e97, -4px 0 0 0 #ff2e97, 4px 0 0 0 #ff2e97,
+        0 0 16px 0 rgba(255,46,151,0.35);
+      transition: transform 0.2s cubic-bezier(0.32,0.72,0,1), filter 0.2s;
+    }
+    .hj-pixel-btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
+    .pixel-btn-outline {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;
+      background: #07060d; color: #f4f1fb; font-weight: 700; border: none;
+      box-shadow:
+        0 -4px 0 0 #1a1530, 0 4px 0 0 #1a1530, -4px 0 0 0 #1a1530, 4px 0 0 0 #1a1530;
+      transition: transform 0.2s cubic-bezier(0.32,0.72,0,1);
+    }
+    .pixel-btn-outline:hover { transform: translateY(-2px); }
+    .terminal-window {
+      position: relative;
+      background: color-mix(in srgb, #07060d 92%, #a22155);
+      box-shadow:
+        0 -4px 0 0 #1a1530, 0 4px 0 0 #1a1530, -4px 0 0 0 #1a1530, 4px 0 0 0 #1a1530,
+        0 0 42px 0 rgba(239,99,89,0.1);
+    }
+    .terminal-window::after {
+      content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0.05;
+      background: repeating-linear-gradient(to bottom, #f4f1fb 0 1px, transparent 1px 3px);
+    }
+    .terminal-bar {
+      display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+      background: color-mix(in srgb, #120f1f 88%, #a22155);
+      box-shadow: 0 4px 0 0 #1a1530;
+    }
+    .terminal-dot { width: 10px; height: 10px; }
+    .field {
+      background: rgba(7,6,13,0.6); border: 1px solid rgba(244,241,251,0.14); padding: 12px 14px; font-size: 13px; color: #f4f1fb;
+    }
+  </style>
+</helmet>
+
+<div style="width:1440px; min-height:1150px; background-color:#07060d; background-image:
+    radial-gradient(2px 2px at 8% 15%, #f4f1fb, transparent), radial-gradient(2px 2px at 22% 62%, #f4f1fb, transparent),
+    radial-gradient(1.5px 1.5px at 40% 22%, #f4f1fb, transparent), radial-gradient(2px 2px at 65% 74%, #f4f1fb, transparent),
+    radial-gradient(1.5px 1.5px at 80% 18%, #f4f1fb, transparent), radial-gradient(2px 2px at 92% 58%, #f4f1fb, transparent),
+    radial-gradient(1.5px 1.5px at 55% 8%, #f4f1fb, transparent), radial-gradient(1.5px 1.5px at 30% 90%, #f4f1fb, transparent),
+    radial-gradient(900px 700px at 12% 0%, rgba(91,47,143,0.3), transparent 60%),
+    radial-gradient(800px 650px at 92% 88%, rgba(156,47,125,0.24), transparent 60%);
+    display:flex; font-family:'Space Mono', monospace; color:#f4f1fb;">
+
+  <div style="width:240px; flex-shrink:0; background:#0c0a14; border-right:4px solid #1a1530; padding:28px 18px; display:flex; flex-direction:column; gap:4px;">
+    <img src="hackjam26-words.png" alt="HackJam" style="width:130px; height:auto; display:block; margin:0 0 24px 4px; image-rendering:pixelated;">
+
+    <sc-for list="{{navItems}}" as="item" hint-placeholder-count="6">
+      <div class="nav-row" onClick="{{item.go}}" style="display:flex; align-items:center; gap:8px; padding:10px 10px; background:{{item.rowBg}};">
+        <span style="width:6px; height:6px; background:{{item.dotColor}}; flex-shrink:0;"></span>
+        <span style="font-size:11px; font-weight:700; letter-spacing:0.05em; color:{{item.textColor}};">{{item.label}}</span>
+      </div>
+    </sc-for>
+
+    <div style="flex:1;"></div>
+
+    <img src="shpe-usf-horiz-ko.png" alt="SHPE USF" style="width:150px; height:auto; opacity:0.82; margin-bottom:20px;">
+    <div style="font-size:10px; color:#63607a; letter-spacing:0.04em;">MREYES · DISCORD ACCOUNT</div>
+  </div>
+
+  <div style="flex:1; padding:56px 56px;">
+
+    <sc-if value="{{isDashboard}}" hint-placeholder-val="{{true}}">
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:36px;">
+        <div>
+          <div style="font-size:13px; color:#c7c2dc; margin-bottom:16px;">Hi, Mariana Reyes!</div>
+          <div style="display:flex; flex-direction:column; align-items:flex-start; gap:14px;">
+            <h1 class="font-pixel" style="margin:0; font-size:26px; line-height:1.7; color:#f4f1fb; max-width:640px;">YOU'RE ACCEPTED<br>TO HACKJAM '26</h1>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="width:4px; height:4px; background:#21e6c1; opacity:0.5;"></span>
+              <span style="width:6px; height:6px; background:#21e6c1;"></span>
+              <span style="width:4px; height:4px; background:#21e6c1; opacity:0.5;"></span>
+            </div>
+          </div>
+          <div style="font-size:13px; color:#9a94b0; margin-top:16px; max-width:460px; line-height:1.7;">Finish the steps below before check-in. [DATE] at [VENUE].</div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:12px; flex-shrink:0;">
+          <span class="pixel-chip" style="--chip-border:#ff2e97; color:#ff2e97;">HACKJAM '26</span>
+          <img src="hackjam-mascot.png" alt="" style="width:100px; height:auto; image-rendering:pixelated;">
+        </div>
+      </div>
+
+      <div style="display:flex; gap:28px; align-items:flex-start;">
+
+        <div style="width:440px; flex-shrink:0; display:flex; flex-direction:column; gap:24px;">
+
+          <div class="pixel-card" style="--pc-border:#21e6c1; padding:26px;">
+            <span class="font-pixel" style="font-size:9px; letter-spacing:0.1em; color:#21e6c1;">// STATUS</span>
+            <div style="font-weight:700; font-size:16px; color:#21e6c1; margin:14px 0; text-shadow:0 0 14px rgba(33,230,193,0.4);">ACCEPTED</div>
+            <div style="display:flex; flex-direction:column; gap:12px;">
+              <div style="display:flex; align-items:center; gap:10px; font-size:12px; color:#7d7896;">
+                <span style="color:#21e6c1;">[x]</span>
+                <span style="text-decoration:line-through;">Confirm attendance</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px; font-size:12px; color:#7d7896;">
+                <span style="color:#21e6c1;">[x]</span>
+                <span style="text-decoration:line-through;">Join Discord</span>
+              </div>
+              <div class="nav-row" onClick="{{toggleWaiver}}" style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:2px;">
+                <div style="display:flex; align-items:center; gap:10px; font-size:12px; color:#f4f1fb;">
+                  <span style="color:{{waiverColor}};">{{waiverMark}}</span>
+                  <span style="text-decoration:{{waiverStrike}};">Complete liability waiver</span>
+                </div>
+                <span style="font-size:11px; font-weight:700; color:#ffd9a0;">{{waiverActionLabel}}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="pixel-card" style="--pc-border:#5b2f8f; padding:30px; display:flex; flex-direction:column; align-items:center;">
+            <span class="font-pixel" style="align-self:flex-start; font-size:9px; letter-spacing:0.1em; color:#c58bff;">// DIGITAL PASS</span>
+            <div style="font-weight:700; font-size:16px; margin:18px 0;">MARIANA REYES</div>
+            <div style="width:188px; height:188px; background:#f4f1fb; padding:12px; flex-shrink:0;">
+              <div style="position:relative; width:164px; height:164px; background-image: repeating-linear-gradient(0deg, #07060d 0 6px, transparent 6px 13px), repeating-linear-gradient(90deg, #07060d 0 6px, transparent 6px 17px); background-blend-mode:multiply; opacity:0.85;">
+                <div style="position:absolute; top:0; left:0; width:48px; height:48px; background:#f4f1fb;"><div style="position:absolute; inset:0; background:#07060d;"><div style="position:absolute; inset:7px; background:#f4f1fb;"><div style="position:absolute; inset:7px; background:#07060d;"></div></div></div></div>
+                <div style="position:absolute; top:0; right:0; width:48px; height:48px; background:#f4f1fb;"><div style="position:absolute; inset:0; background:#07060d;"><div style="position:absolute; inset:7px; background:#f4f1fb;"><div style="position:absolute; inset:7px; background:#07060d;"></div></div></div></div>
+                <div style="position:absolute; bottom:0; left:0; width:48px; height:48px; background:#f4f1fb;"><div style="position:absolute; inset:0; background:#07060d;"><div style="position:absolute; inset:7px; background:#f4f1fb;"><div style="position:absolute; inset:7px; background:#07060d;"></div></div></div></div>
+              </div>
+            </div>
+            <div style="margin-top:18px; font-size:12px; letter-spacing:0.05em; color:#c58bff;">HJ26-0482</div>
+            <div style="margin-top:8px; font-size:11px; color:#7d7896; text-align:center;">SHOW THIS AT CHECK-IN FOR MEALS &amp; SWAG</div>
+          </div>
+
+        </div>
+
+        <div style="flex:1; display:flex; flex-direction:column; gap:24px;">
+
+          <div style="display:flex; gap:24px;">
+            <div class="pixel-card" style="--pc-border:#1a1530; padding:18px 20px; flex:1;">
+              <span class="font-pixel" style="font-size:8px; letter-spacing:0.08em; color:#9a94b0;">MEAL PREF</span>
+              <div style="font-size:13px; font-weight:700; margin-top:10px;">VEGETARIAN</div>
+            </div>
+            <div class="pixel-card clickable" onClick="{{goTeam}}" style="--pc-border:#1a1530; padding:18px 20px; flex:1;">
+              <span class="font-pixel" style="font-size:8px; letter-spacing:0.08em; color:#9a94b0;">TEAM</span>
+              <div style="font-size:13px; font-weight:700; margin-top:10px;">NOT FORMED · <span style="color:#21e6c1;">FIND TEAMMATES</span></div>
+            </div>
+          </div>
+
+          <div class="pixel-card clickable" onClick="{{goGuide}}" style="--pc-border:#9c2f7d; padding:20px 22px; display:flex; align-items:center; justify-content:space-between;">
+            <div style="display:flex; align-items:center; gap:14px;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9c2f7d" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M4 5.5C4 4.7 4.7 4 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5v-13Z"/><path d="M20 5.5c0-.8-.7-1.5-1.5-1.5H13v16h5.5c.8 0 1.5-.7 1.5-1.5v-13Z"/></svg>
+              <div>
+                <div style="font-size:13px; font-weight:700;">HACKER GUIDE</div>
+                <div style="font-size:11px; color:#9a94b0; margin-top:4px;">Venue map, wifi, schedule, and what to bring.</div>
+              </div>
+            </div>
+            <span style="font-size:16px; color:#7d7896;">&gt;</span>
+          </div>
+
+          <div class="terminal-window">
+            <div class="terminal-bar">
+              <span class="terminal-dot" style="background:#ff5f56;"></span>
+              <span class="terminal-dot" style="background:#ffbd2e;"></span>
+              <span class="terminal-dot" style="background:#27c93f;"></span>
+              <span class="font-pixel" style="font-size:8px; color:#c7c2dc; margin-left:6px;">CONTACT.LOG</span>
+            </div>
+            <div style="padding:8px 22px 18px 22px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 0; border-bottom:1px solid rgba(244,241,251,0.08);">
+                <div style="font-size:12px;"><span style="color:#21e6c1;">$</span> discord --join <span style="color:#7d7896;">#hackjam-general</span></div>
+                <span style="font-size:11px; color:#21e6c1;">JOIN</span>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 0;">
+                <div style="font-size:12px;"><span style="color:#21e6c1;">$</span> mail --to <span style="color:#7d7896;">hackjam@shpeusf.org</span></div>
+                <span style="font-size:11px; color:#21e6c1;">SEND</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isProfile}}" hint-placeholder-val="{{false}}">
+      <h1 class="font-pixel" style="margin:0 0 20px 0; font-size:22px; color:#f4f1fb;">PROFILE</h1>
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:32px;">
+        <span style="width:4px; height:4px; background:#21e6c1; opacity:0.5;"></span>
+        <span style="width:6px; height:6px; background:#21e6c1;"></span>
+        <span style="width:4px; height:4px; background:#21e6c1; opacity:0.5;"></span>
+      </div>
+
+      <div class="pixel-card" style="--pc-border:#1a1530;">
+        <div style="display:flex; justify-content:flex-end; padding:20px 26px;">
+          <div class="hj-pixel-btn" style="padding:11px 22px; font-size:11px;">SAVE PROFILE CHANGES</div>
+        </div>
+        <div style="height:1px; background:rgba(244,241,251,0.08);"></div>
+
+        <div style="display:flex; gap:36px; padding:30px 26px;">
+          <div style="width:200px; flex-shrink:0;">
+            <div class="font-pixel" style="font-size:9px; color:#ff2e97; margin-bottom:8px;">01</div>
+            <div style="font-size:13px; font-weight:700; letter-spacing:0.04em; margin-bottom:8px;">BASICS</div>
+            <div style="font-size:12px; color:#9a94b0; line-height:1.6;">Your name and best contact details.</div>
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column; gap:16px;">
+            <div style="display:flex; gap:18px;">
+              <div style="flex:1;"><div style="font-size:12px; margin-bottom:8px;">First Name</div><div class="field">Mariana</div></div>
+              <div style="flex:1;"><div style="font-size:12px; margin-bottom:8px;">Last Name</div><div class="field">Reyes</div></div>
+            </div>
+            <div style="display:flex; gap:18px;">
+              <div style="flex:1;"><div style="font-size:12px; margin-bottom:8px;">Email</div><div class="field" style="color:#c7c2dc;">mariana@example.com</div></div>
+              <div style="flex:1;"><div style="font-size:12px; margin-bottom:8px;">Phone <span style="font-style:italic; color:#7d7896;">Optional</span></div><div class="field" style="color:#c7c2dc;">[PHONE]</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="height:1px; background:rgba(244,241,251,0.08); margin:0 26px;"></div>
+
+        <div style="display:flex; gap:36px; padding:30px 26px;">
+          <div style="width:200px; flex-shrink:0;">
+            <div class="font-pixel" style="font-size:9px; color:#ff2e97; margin-bottom:8px;">02</div>
+            <div style="font-size:13px; font-weight:700; letter-spacing:0.04em; margin-bottom:8px;">ABOUT YOU</div>
+            <div style="font-size:12px; color:#9a94b0; line-height:1.6;">Shirt size and demographic info.</div>
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column; gap:16px;">
+            <div style="display:flex; gap:18px;">
+              <div style="flex:1;"><div style="font-size:12px; margin-bottom:8px;">Gender <span style="font-style:italic; color:#7d7896;">Optional</span></div><div class="field">Woman</div></div>
+              <div style="flex:1;"><div style="font-size:12px; margin-bottom:8px;">Shirt Size</div><div class="field">M</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="height:1px; background:rgba(244,241,251,0.08); margin:0 26px;"></div>
+
+        <div style="display:flex; gap:36px; padding:30px 26px;">
+          <div style="width:200px; flex-shrink:0;">
+            <div class="font-pixel" style="font-size:9px; color:#ff2e97; margin-bottom:8px;">03</div>
+            <div style="font-size:13px; font-weight:700; letter-spacing:0.04em; margin-bottom:8px;">ACADEMIC INFO</div>
+            <div style="font-size:12px; color:#9a94b0; line-height:1.6;">Your school, major, and graduation.</div>
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column; gap:16px;">
+            <div style="display:flex; gap:18px;">
+              <div style="flex:1;"><div style="font-size:12px; margin-bottom:8px;">School</div><div class="field">University of South Florida</div></div>
+              <div style="flex:1;"><div style="font-size:12px; margin-bottom:8px;">Major</div><div class="field">Computer Engineering</div></div>
+            </div>
+            <div style="display:flex; gap:18px;">
+              <div style="flex:1;"><div style="font-size:12px; margin-bottom:8px;">Graduation Date</div><div class="field" style="color:#c7c2dc;">[DATE]</div></div>
+              <div style="flex:1;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isTeam}}" hint-placeholder-val="{{false}}">
+      <h1 class="font-pixel" style="margin:0 0 20px 0; font-size:22px; color:#f4f1fb;">TEAM</h1>
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:32px;">
+        <span style="width:4px; height:4px; background:#21e6c1; opacity:0.5;"></span>
+        <span style="width:6px; height:6px; background:#21e6c1;"></span>
+        <span style="width:4px; height:4px; background:#21e6c1; opacity:0.5;"></span>
+      </div>
+
+      <sc-if value="{{noTeam}}" hint-placeholder-val="{{true}}">
+        <div class="pixel-card" style="--pc-border:#1a1530; padding:36px; max-width:560px; text-align:center;">
+          <div style="font-size:14px; font-weight:700; margin-bottom:10px;">You haven't joined a team yet.</div>
+          <div style="font-size:12px; color:#9a94b0; line-height:1.7; margin-bottom:26px;">Teams of 1–3 hackers. Solo hacking is welcome too.</div>
+          <div style="display:flex; gap:14px; justify-content:center;">
+            <div class="hj-pixel-btn" onClick="{{createTeam}}" style="padding:12px 22px; font-size:11px;">CREATE A TEAM</div>
+            <div class="pixel-btn-outline" style="padding:12px 22px; font-size:11px;">JOIN WITH CODE</div>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{hasTeam}}" hint-placeholder-val="{{false}}">
+        <div class="pixel-card" style="--pc-border:#5b2f8f; padding:32px; max-width:560px;">
+          <span class="font-pixel" style="font-size:9px; letter-spacing:0.1em; color:#c58bff;">// YOUR TEAM</span>
+          <div style="font-size:18px; font-weight:700; margin:14px 0 20px 0;">PIXEL PIONEERS</div>
+          <div style="display:flex; align-items:center; gap:12px; padding:12px 0; border-top:1px solid rgba(244,241,251,0.08);">
+            <div style="width:32px; height:32px; background:#1a1530; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0;">MR</div>
+            <div style="font-size:13px;">Mariana Reyes <span style="color:#7d7896; font-size:11px;">(you)</span></div>
+          </div>
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-top:20px; padding-top:20px; border-top:1px solid rgba(244,241,251,0.08);">
+            <span class="pixel-chip" style="--chip-border:#5b2f8f; color:#c58bff;">INVITE HJ26-7F3K</span>
+            <div class="pixel-btn-outline" onClick="{{leaveTeam}}" style="padding:9px 16px; font-size:10px;">LEAVE TEAM</div>
+          </div>
+        </div>
+      </sc-if>
+    </sc-if>
+
+    <sc-if value="{{isGuide}}" hint-placeholder-val="{{false}}">
+      <h1 class="font-pixel" style="margin:0 0 20px 0; font-size:22px; color:#f4f1fb;">HACKER GUIDE</h1>
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:32px;">
+        <span style="width:4px; height:4px; background:#21e6c1; opacity:0.5;"></span>
+        <span style="width:6px; height:6px; background:#21e6c1;"></span>
+        <span style="width:4px; height:4px; background:#21e6c1; opacity:0.5;"></span>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:24px; max-width:900px;">
+        <div class="pixel-card" style="--pc-border:#21e6c1; padding:24px;">
+          <span class="font-pixel" style="font-size:8px; color:#21e6c1; letter-spacing:0.08em;">VENUE &amp; PARKING</span>
+          <div style="font-size:13px; margin-top:14px; line-height:1.8;">[VENUE], University of South Florida<br>[ADDRESS]<br>Free parking in [LOT NAME].</div>
+        </div>
+        <div class="pixel-card" style="--pc-border:#5b2f8f; padding:24px;">
+          <span class="font-pixel" style="font-size:8px; color:#c58bff; letter-spacing:0.08em;">WIFI</span>
+          <div style="font-size:13px; margin-top:14px; line-height:1.8;">Network: <span style="color:#c58bff;">[WIFI-NAME]</span><br>Password: <span style="color:#c58bff;">[WIFI-PASSWORD]</span></div>
+        </div>
+        <div class="pixel-card" style="--pc-border:#9c2f7d; padding:24px;">
+          <span class="font-pixel" style="font-size:8px; color:#ff8fd6; letter-spacing:0.08em;">WHAT TO BRING</span>
+          <div style="font-size:13px; margin-top:14px; line-height:1.9;">[ ] Laptop &amp; charger<br>[ ] Student ID<br>[ ] Valid photo ID<br>[ ] Refillable water bottle</div>
+        </div>
+        <div class="pixel-card" style="--pc-border:#ffd9a0; padding:24px;">
+          <span class="font-pixel" style="font-size:8px; color:#ffd9a0; letter-spacing:0.08em;">CODE OF CONDUCT</span>
+          <div style="font-size:13px; margin-top:14px; line-height:1.8;">HackJam is an MLH Member Event. All hackers agree to the <a href="#">MLH Code of Conduct</a>.</div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isSchedule}}" hint-placeholder-val="{{false}}">
+      <h1 class="font-pixel" style="margin:0 0 20px 0; font-size:22px; color:#f4f1fb;">SCHEDULE</h1>
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:32px;">
+        <span style="width:4px; height:4px; background:#21e6c1; opacity:0.5;"></span>
+        <span style="width:6px; height:6px; background:#21e6c1;"></span>
+        <span style="width:4px; height:4px; background:#21e6c1; opacity:0.5;"></span>
+      </div>
+      <div class="terminal-window" style="max-width:700px;">
+        <div class="terminal-bar">
+          <span class="terminal-dot" style="background:#ff5f56;"></span>
+          <span class="terminal-dot" style="background:#ffbd2e;"></span>
+          <span class="terminal-dot" style="background:#27c93f;"></span>
+          <span class="font-pixel" style="font-size:8px; color:#c7c2dc; margin-left:6px;">RUN-OF-SHOW.LOG</span>
+        </div>
+        <div style="padding:10px 24px 22px 24px;">
+          <sc-for list="{{scheduleItems}}" as="row" hint-placeholder-count="9">
+            <div style="display:flex; align-items:center; gap:18px; padding:12px 0; border-bottom:1px solid rgba(244,241,251,0.07);">
+              <span class="font-pixel" style="font-size:9px; color:{{row.color}}; width:78px; flex-shrink:0;">{{row.time}}</span>
+              <span style="font-size:13px; color:{{row.textColor}};">{{row.label}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isHelp}}" hint-placeholder-val="{{false}}">
+      <h1 class="font-pixel" style="margin:0 0 20px 0; font-size:22px; color:#f4f1fb;">HELP / REPORT AN ISSUE</h1>
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:32px;">
+        <span style="width:4px; height:4px; background:#21e6c1; opacity:0.5;"></span>
+        <span style="width:6px; height:6px; background:#21e6c1;"></span>
+        <span style="width:4px; height:4px; background:#21e6c1; opacity:0.5;"></span>
+      </div>
+      <div class="terminal-window" style="max-width:640px;">
+        <div class="terminal-bar">
+          <span class="terminal-dot" style="background:#ff5f56;"></span>
+          <span class="terminal-dot" style="background:#ffbd2e;"></span>
+          <span class="terminal-dot" style="background:#27c93f;"></span>
+          <span class="font-pixel" style="font-size:8px; color:#c7c2dc; margin-left:6px;">NEW-REPORT.LOG</span>
+        </div>
+        <div style="padding:24px 26px; display:flex; flex-direction:column; gap:18px;">
+          <div><div style="font-size:12px; margin-bottom:8px;">Category</div><div class="field" style="display:flex; justify-content:space-between; align-items:center; color:#7d7896;">Select a category... <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7d7896" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></div></div>
+          <div><div style="font-size:12px; margin-bottom:8px;">Title</div><div class="field" style="color:#7d7896;">A brief, descriptive title...</div></div>
+          <div><div style="font-size:12px; margin-bottom:8px;">Description</div><div class="field" style="height:96px; color:#7d7896;">Please provide as much detail as possible...</div></div>
+          <div><div style="font-size:12px; margin-bottom:8px;">Contact <span style="font-style:italic; color:#7d7896;">Optional</span></div><div class="field" style="color:#7d7896;">Discord handle or email...</div></div>
+          <div class="hj-pixel-btn" style="padding:12px 22px; font-size:11px; align-self:flex-start; margin-top:6px;">SUBMIT REPORT</div>
+        </div>
+      </div>
+      <div style="font-size:12px; color:#7d7896; margin-top:18px; max-width:640px;">For urgent issues during the event, message an organizer directly in <a href="#">Discord</a>.</div>
+    </sc-if>
+
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { page: "dashboard", waiverDone: false, hasTeam: false };
+  }
+
+  renderVals() {
+    const page = this.state.page;
+    const navDefs = [
+      { id: "dashboard", label: "DASHBOARD" },
+      { id: "profile", label: "PROFILE" },
+      { id: "team", label: "TEAM" },
+      { id: "guide", label: "GUIDE" },
+      { id: "schedule", label: "SCHEDULE" },
+      { id: "help", label: "HELP" },
+    ];
+    const navItems = navDefs.map((n) => {
+      const active = page === n.id;
+      return {
+        label: n.label,
+        rowBg: active ? "rgba(33,230,193,0.1)" : "transparent",
+        textColor: active ? "#21e6c1" : "#9a94b0",
+        dotColor: active ? "#21e6c1" : "transparent",
+        go: () => this.setState({ page: n.id }),
+      };
+    });
+
+    const waiverDone = this.state.waiverDone;
+
+    const scheduleDefs = [
+      { time: "[T0]", label: "Check-in & breakfast" },
+      { time: "[T1]", label: "Opening ceremony" },
+      { time: "[T2]", label: "Hacking begins" },
+      { time: "[T3]", label: "Workshop block" },
+      { time: "[T4]", label: "Lunch" },
+      { time: "[T5]", label: "Dinner" },
+      { time: "[T6]", label: "Submission deadline" },
+      { time: "[T7]", label: "Judging" },
+      { time: "[T8]", label: "Closing ceremony & awards" },
+    ];
+    const scheduleItems = scheduleDefs.map((s, i) => ({
+      time: s.time,
+      label: s.label,
+      color: i === 2 ? "#21e6c1" : "#7d7896",
+      textColor: i === 2 ? "#f4f1fb" : "#c7c2dc",
+    }));
+
+    return {
+      navItems,
+      isDashboard: page === "dashboard",
+      isProfile: page === "profile",
+      isTeam: page === "team",
+      isGuide: page === "guide",
+      isSchedule: page === "schedule",
+      isHelp: page === "help",
+      waiverMark: waiverDone ? "[x]" : "[ ]",
+      waiverColor: waiverDone ? "#21e6c1" : "#ffd9a0",
+      waiverStrike: waiverDone ? "line-through" : "none",
+      waiverActionLabel: waiverDone ? "DONE" : "RUN >",
+      toggleWaiver: () => this.setState({ waiverDone: !this.state.waiverDone }),
+      goGuide: () => this.setState({ page: "guide" }),
+      goTeam: () => this.setState({ page: "team" }),
+      hasTeam: this.state.hasTeam,
+      noTeam: !this.state.hasTeam,
+      createTeam: () => this.setState({ hasTeam: true }),
+      leaveTeam: () => this.setState({ hasTeam: false }),
+      scheduleItems,
+    };
+  }
+}
+</script>
+</body>
+</html>
