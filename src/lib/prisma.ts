@@ -1,5 +1,5 @@
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "@/generated/prisma";
+import { PrismaClient } from "@/generated/prisma/client";
 
 // Prisma 7 has no Rust query engine and no schema-level connection URL —
 // the Client connects through a driver adapter instead. DATABASE_URL is
