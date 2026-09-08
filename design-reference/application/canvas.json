@@ -1,0 +1,22 @@
+{
+  "pages": [
+    { "id": "page-1", "name": "Flow" },
+    { "id": "page-2", "name": "Parked starts" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1280, "h": 880, "title": "Application flow (clickable)", "is_interactive": true, "page": "page-1" },
+    { "file": "FieldStates.dc.html", "x": 1400, "y": 0, "w": 900, "h": 900, "title": "Form controls", "page": "page-1" },
+    { "file": "AlreadyApplied.dc.html", "x": 0, "y": 1010, "w": 900, "h": 560, "title": "Already applied", "page": "page-1" },
+    { "file": "Closed.dc.html", "x": 1020, "y": 1010, "w": 900, "h": 560, "title": "Applications closed", "page": "page-1" },
+    { "file": "StartPlanet.dc.html", "x": 0, "y": 0, "w": 1280, "h": 880, "title": "B — Planet", "page": "page-2" },
+    { "file": "StartTerminal.dc.html", "x": 1380, "y": 0, "w": 1280, "h": 880, "title": "C — Terminal", "page": "page-2" },
+    { "file": "ArcadeStart.dc.html", "x": 2760, "y": 0, "w": 1280, "h": 880, "title": "D — Arcade cabinet", "page": "page-2" }
+  ],
+  "annotations": [
+    { "id": "start-here", "x": 0, "y": -210, "w": 470, "page": "page-1", "text": "START HERE — click SIGN IN WITH DISCORD, then NEXT through all 5 steps to the confirmation screen.\n\nThe start screen is board A (bare): breadcrumb showing the handoff from hackjam26.com, centred stack, no ambient art. Picked so the one button on that screen has nothing competing with it.\n\nProgress is an altitude descent reusing AltitudeHUD from the HackJam site: 402 KM down through LOW ORBIT → NEBULA FIELD → UPPER ATMOSPHERE → SUNSET BAND → SURFACE. The Earth in the rail grows as you get closer. Submitting = landing.\n\nNo backend; sign-in is a mockup." },
+    { "id": "open-questions", "x": 1400, "y": -210, "w": 470, "page": "page-1", "text": "TWO THINGS TO DECIDE:\n\n1. School step — allow manual entry when a school isn't on MLH's list? PLAT-15 says no free text; Knight Hacks allows it.\n\n2. The two short-answer questions are placeholders. Real copy needed." },
+    { "id": "ticket-map", "x": 1980, "y": 1010, "w": 400, "page": "page-1", "text": "TICKET MAP\nSteps 1-2 → PLAT-16, 17\nStep 3 school → PLAT-15 (uses searchSchools from PLAT-14)\nStep 4 resume → PLAT-21\nStep 5 consent → PLAT-18\nForm controls → PLAT-19\nConfirmation → PLAT-24\nAlready applied → PLAT-25" },
+    { "id": "parked-note", "x": 0, "y": -230, "w": 560, "page": "page-2", "text": "PARKED — not in the flow, kept so they're cheap to revive.\n\nB — PLANET. Big drawn world low in the frame; ties to the altitude descent.\n\nC — TERMINAL. Sign-in inside the APPLY.EXE window; bookends with the confirmation screen, which is already a terminal.\n\nD — ARCADE CABINET. The real cabinet artwork scaled past the frame and cropped, CRT content showing through its alpha-cut screen, gold cluster live.\n\nAny of these is a drop-in replacement for step 0 in Main — same content, different surround." }
+  ],
+  "launch": { "view": "canvas", "page": "page-1" }
+}
