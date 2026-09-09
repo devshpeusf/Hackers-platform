@@ -58,9 +58,17 @@ body {
   background-attachment: fixed;
 }
 
-a {
-  color: var(--color-accent-teal);
-  text-decoration: none;
+/*
+ * Layered deliberately. Unlayered rules beat every Tailwind utility no matter
+ * the specificity, so an unlayered `a { color }` made `text-surface-bg` on an
+ * anchor-styled-as-button do nothing — teal text on a pink button. In @layer
+ * base this still colours ordinary links, but any text-* utility now wins.
+ */
+@layer base {
+  a {
+    color: var(--color-accent-teal);
+    text-decoration: none;
+  }
 }
 
 /*
