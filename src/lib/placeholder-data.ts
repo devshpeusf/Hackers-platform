@@ -163,13 +163,43 @@ export const mlhPendingNotice =
   "We have applied to be an MLH Hack Day. These checkboxes only apply if our application is accepted \u2014 your information will not be shared if we do not become an MLH event.";
 
 /**
- * Static stand-in for the school typeahead. The real search lives in
- * src/lib/schools.ts on the PLAT-14 branch; wiring it up is PLAT-15.
+ * Schools whose applicants we expect most, surfaced above equally-ranked
+ * matches in the typeahead. ORDER MATTERS — the host school is first.
+ *
+ * This only reorders ties, so it can never surface a wrong school; it fixes
+ * cases like "usf", a valid acronym for six institutions, where the one an
+ * applicant at a USF event means was ranking sixth.
+ *
+ * Every name is verified against src/data/schools.json — a string MLH spells
+ * differently silently does nothing. Note Florida A&M is listed under its
+ * full legal name.
+ *
+ * Event data, not app data: this becomes a column on the events table when
+ * Phase 1 lands (see CLAUDE.md on staying multi-event). A hackathon at
+ * another school would ship a different list.
  */
-export const schoolSuggestions = [
-  { name: "University of South Florida", note: "YOUR SCHOOL" },
-  { name: "The Academy of South Florida", note: "" },
-];
+export const boostedSchools = [
+  // host
+  "University of South Florida",
+  // the rest of the state's big CS programs, roughly by expected volume
+  "University of Central Florida",
+  "University of Florida",
+  "Florida International University",
+  "Florida State University",
+  "Florida Atlantic University",
+  "University of Miami",
+  "Florida Institute of Technology",
+  "Embry-Riddle Aeronautical University",
+  "Nova Southeastern University",
+  "Florida Gulf Coast University",
+  "University of North Florida",
+  "University of West Florida",
+  "Florida Agricultural and Mechanical University",
+  "Florida Polytechnic University",
+  "University of Tampa",
+  "Stetson University",
+  "Rollins College",
+] as const;
 
 export const applicationCopy = {
   from: "hackjam26.com",

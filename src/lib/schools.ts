@@ -86,8 +86,13 @@ export type SearchOptions = {
   /** Maximum matches to return. Defaults to 10. */
   limit?: number;
   /**
-   * School names to surface first among equally-ranked matches — the
-   * host school for the event being applied to, typically.
+   * School names to surface first among equally-ranked matches — the host
+   * school and its neighbours, typically.
+   *
+   * ORDER MATTERS: earlier entries outrank later ones, so put the host
+   * school first. Without that, ties fall through to name length and
+   * "University of Florida" beats "University of South Florida" at a USF
+   * event purely for being shorter.
    *
    * This exists because acronyms collide badly: "usf" is a valid
    * acronym for six schools, and plain tie-breaking buries the one the
@@ -124,7 +129,10 @@ export function searchSchools(query: string, options: SearchOptions = {}): Schoo
   const q = normalize(query);
   if (!q) return [];
 
-  const boosted = new Set(boost.map(normalize));
+  // normalized name -> position in the boost list; unlisted schools sort last
+  const boostRank = new Map(boost.map((name, i) => [normalize(name), i]));
+  const UNBOOSTED = Number.MAX_SAFE_INTEGER;
+  const boostOf = (name: string) => boostRank.get(normalize(name)) ?? UNBOOSTED;
 
   const matches: SchoolMatch[] = [];
   for (const entry of getIndex()) {
@@ -143,7 +151,7 @@ export function searchSchools(query: string, options: SearchOptions = {}): Schoo
     .sort(
       (a, b) =>
         a.rank - b.rank ||
-        Number(boosted.has(normalize(b.name))) - Number(boosted.has(normalize(a.name))) ||
+        boostOf(a.name) - boostOf(b.name) ||
         a.name.length - b.name.length ||
         a.name.localeCompare(b.name, "en"),
     )
