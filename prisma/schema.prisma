@@ -16,3 +16,84 @@ model Ping {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
 }
+
+// TABLES START HERE
+
+model Person {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  firstName String
+  lastName  String
+  email     String @unique
+  phoneNum  String @unique
+
+  // One person can have one resume
+  resume Resume?
+
+  // One person can submit many applications
+  applications Application[]
+}
+
+model Event {
+  id        String   @id @default(cuid())
+  name      String
+  startDate DateTime
+  endDate   DateTime
+
+  // One event can have many applications
+  applications Application[]
+}
+
+// Resume is its own model for reusability
+model Resume {
+  id         String   @id @default(cuid())
+  fileName   String
+  storageKey String   @unique
+  uploadedAt DateTime @default(now())
+
+  // Connects each resume to one person
+  personId String @unique
+  person   Person @relation(fields: [personId], references: [id])
+}
+
+model Application {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  // Connects application to a person
+  personId String
+  person   Person @relation(fields: [personId], references: [id])
+
+  // Connects application to an event
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id])
+
+  status       ApplicationStatus @default(SUBMITTED)
+  school       String
+  schoolSource SchoolSource
+  levelOfStudy String
+  country      String
+  age          Int
+  diet         String
+
+  gitHub    String?
+  linkedIn  String?
+  portfolio String?
+
+  // Every person can only submit one application to each event
+  @@unique([personId, eventId])
+}
+
+// Possible application statuses
+enum ApplicationStatus {
+  SUBMITTED
+  ACCEPTED
+  REJECTED
+  WAITLISTED
+}
+
+enum SchoolSource {
+  catalog
+  manual
+}
