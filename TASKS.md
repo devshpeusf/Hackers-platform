@@ -1,200 +1,161 @@
 # TASKS.md
 
-Everything still to build, grouped roughly in the order it'll likely
-need to happen. See CLAUDE.md for what *is* here (scaffold, theme, six
-static pages).
+Everything still to build, grouped roughly in the order it'll likely need to
+happen. See CLAUDE.md for the design system and conventions.
 
 ## How this file relates to Jira
 
-Work is tracked in the **`PLAT` project** in Jira. This file is the
-narrative version — it carries the *reasoning* (why something is
-blocked, what's undecided, what a ticket's one-line summary leaves out)
-that a ticket title can't. The board is the source of truth for status;
-this file is the source of truth for context.
+Work is tracked in the **`PLAT` project**. This file is the narrative version —
+it carries the *reasoning* (why something is blocked, what's undecided, what a
+ticket title leaves out) that a one-line summary can't. The board owns status;
+this file owns context.
 
-Every item below is annotated:
+Items are annotated `[PLAT-N]` or `[no ticket]`.
 
-- `[PLAT-N]` — a ticket exists for this
-- `[no ticket]` — real work, nothing filed yet
+Last synced **2026-09-09**, against merged PRs and the team chat rather than the
+board directly.
 
-As of the last sync (2026-09-08): **31 tickets, 1 done, 30 open**, all
-sitting in `To Do`. Only PLAT-9 has an assignee. Nothing is in progress.
+## Decisions made (don't re-litigate)
 
-**The board and this file cover different halves of the product.**
-Almost every ticket is about the *pre-acceptance* application flow plus
-organizer review. The six pages that actually exist are the
-*post-acceptance* hacker portal. Phases 4 and 5 below, and the sponsor
-portal in Phase 6, have no ticket coverage at all — that's a real gap,
-not an oversight in the annotation.
+- **Auth is Discord OAuth**, and applicants sign in *before* applying. This
+  closes the old "confirm Auth.js is the intended provider" question — the
+  answer is likely no: Supabase Auth ships a Discord provider, so Auth.js is
+  probably an unnecessary dependency.
+- **Supabase** is the platform: Postgres via Prisma today, with Auth and
+  Storage available for PLAT-12 and PLAT-20/21.
+- **Prisma 7 with a driver adapter.** There is no `url` in `schema.prisma` —
+  the CLI reads `prisma.config.ts`, the app reads `src/lib/prisma.ts`. A
+  Prisma 6 CLI will fail with P1012 against this setup.
+- **Manual school entry is allowed and flagged**, overriding PLAT-15's original
+  "no typing whatever they want". MLH's list has gaps, and a forced pick
+  produces either a wrong school or an abandoned application — both invisible.
+- **The plain start screen won.** Planet, terminal and arcade-cabinet variants
+  are parked on page 2 of the design canvas. Revisit once it's live.
+- **Workflow**: branch → PR → self-review → merge. Peer review isn't required.
 
 ## Done
 
-- [x] **Initialize project scaffolding** `[PLAT-7]` — commit `92f706c`.
-      Next.js + Tailwind design system, six static UI pages.
+- [x] Project scaffolding `[PLAT-7]`
+- [x] MLH school list imported — 13,103 schools, refresh script `[PLAT-14]` #1
+- [x] Application flow design canvas `[PLAT-35]` #2
+- [x] Postgres + Prisma + Supabase connection `[PLAT-8]` #3
+- [x] Site deploying `[PLAT-10]`
+- [x] School picker: `/api/schools` + typeahead, manual entry flagged `[PLAT-15]` #5
+
+## In flight
+
+- [ ] **Set up tables in the DB** `[PLAT-9]` — Juan. `schema.prisma` currently
+      holds only a `Ping` model. Nearly everything below waits on this.
+      **The school field needs two columns**: the name, and a
+      `catalog`/`manual` source flag. The frontend already tracks it; adding
+      the flag later means backfilling guesses.
+- [ ] **Build login** `[PLAT-12]` — in progress. See Phase 2.
 
 ## Not yet designed
 
-- **The application form.** `[PLAT-35 — "create design for application
-  page"]` This mockup only covers the *post-acceptance* hacker
-  experience (dashboard, profile, team, guide, schedule, help). There is
-  no mockup yet for: the public application/registration flow, what
-  fields it collects, resume upload UI, consent/waiver collection at
-  application time (vs. the dashboard's "complete waiver" checklist
-  item, which assumes the waiver exists but doesn't show its content),
-  or what an applicant sees between "applied" and "accepted" (a pending
-  state, a rejection state, waitlist?). This needs a design pass before
-  any of Phase 3 below can start.
-  **Sequencing risk:** PLAT-35 was the last ticket created but it blocks
-  PLAT-16/17/18. It should be pulled to the front of the queue.
-- **The organizer dashboard.** `[no design ticket; build tickets are
-  PLAT-28/29/30]` No mockup, no page structure decided. Needed for
-  reviewing applications, managing check-in, and viewing sponsor-facing
-  data. The build tickets exist without a design ticket in front of
-  them — same shape of problem as PLAT-35, one step behind it.
-- **The sponsor resume portal.** `[no ticket]` Not designed at all yet.
-  Note PLAT-30 is *organizers* opening resumes, which is a different
-  surface with different access control.
-- **QR check-in scanning flow** (the organizer side — scanning a
-  hacker's badge). `[no ticket]` The hacker-facing digital pass exists as
-  static UI; the scanning/validation side has no design.
-- **Multi-event UI.** `[no ticket]` Every page here assumes a single
-  hardcoded event. Nothing is designed yet for how an organizer
-  picks/switches events, or how a hacker's dashboard adapts if they're
-  relevant to more than one.
+- **The organizer dashboard.** `[build tickets PLAT-28/29/30, no design ticket]`
+  Needed for reviewing applications and managing check-in.
+- **The sponsor resume portal.** `[no ticket]` PLAT-30 is *organizers* opening
+  resumes — a different surface with different access control.
+- **QR check-in scanning** (the organizer side). `[no ticket]`
+- **Multi-event UI.** `[no ticket]` Everything assumes one hardcoded event.
 
 ## Phase 1 — Data layer
 
-- [ ] Design the Prisma schema: events (the multi-event root table),
-      applications, hackers/users, teams, waivers/consent records, meal
-      preferences, check-ins. `[no ticket — implied by PLAT-8/9, but the
-      schema-design step isn't filed separately]`
-- [ ] Set up Postgres + Prisma, initial migration. `[PLAT-8 "Create the
-      database", PLAT-9 "Set up table in DB"]`
-- [ ] Seed script for fake testing data. `[PLAT-13]`
-- [ ] Set up transactional email sending. `[PLAT-11]` Infrastructure
-      dependency for PLAT-23 (confirmation email) and PLAT-26 (MLH
-      reminder) — worth doing early since both later tickets block on it.
-- [ ] Decide how `lib/placeholder-data.ts` maps to real tables — it was
-      written to make this mapping obvious; use it as the checklist for
-      what queries need to exist, then delete it. `[no ticket]`
+- [x] Postgres + Prisma, initial migration `[PLAT-8]`
+- [ ] The actual schema: events, applications, hackers, teams, waivers, meal
+      preferences, check-ins `[PLAT-9]`
+- [ ] Seed script for fake testing data `[PLAT-13]`
+- [ ] Transactional email `[PLAT-11]` — the ticket itself says research is
+      needed, and DNS records make it an unbounded wait. Blocks PLAT-23 and
+      PLAT-26, so start it before they're urgent.
+- [ ] Delete `lib/placeholder-data.ts` once real data lands. It was written to
+      make the mapping obvious — use it as the checklist. `[no ticket]`
 
 ## Phase 2 — Auth
 
-- [ ] Build login. `[PLAT-12]` **Provider still unconfirmed** — Auth.js
-      was mentioned once in the original brief and never specified;
-      Discord OAuth is the likely intent given "MREYES · DISCORD
-      ACCOUNT" in the sidebar placeholder. This decision gates both
-      PLAT-12 and PLAT-27.
-- [ ] Session handling, protected routes for the `(app)` route group.
-      `[no ticket]`
-- [ ] Roles — how organizer accounts differ from hacker accounts.
-      `[PLAT-27 "Add roles"]`
+- [ ] **Discord OAuth login** `[PLAT-12]`
+      - Create the Discord application, put its client ID/secret into the
+        Supabase dashboard. **Dashboard work in Tommy's project, not code** —
+        line this up early, it's the likeliest blocker.
+      - `@supabase/supabase-js` + `@supabase/ssr`, with browser/server/
+        middleware clients and a root middleware that refreshes the session.
+      - Discord OAuth **returns no usable email**. Knight Hacks store a
+        synthetic `<discordId>@blade.org` placeholder and ask for a real email
+        in the form; ours does the same on step 1.
+      - Scope Supabase to auth and storage. Application data stays on Prisma so
+        `schema.prisma` remains the single source of truth.
+- [ ] Protected routes for the `(apply)` and `(app)` groups `[no ticket]`
+- [ ] Roles — how organizers differ from hackers `[PLAT-27]`
 
 ## Phase 3 — Application flow
 
-Design first (PLAT-35), then:
+The screens exist and are clickable at `/apply` and `/apply/form`, but they are
+**cosmetic**: nothing authenticates, validates or submits. Inputs are
+uncontrolled so typing feels real; nothing reads them.
 
-- [ ] Load school list. `[PLAT-14]`
-- [ ] Create school picker. `[PLAT-15]`
-- [ ] Build form layout. `[PLAT-16]`
-- [ ] Add questions to form. `[PLAT-17]`
-- [ ] Short answers and consent. `[PLAT-18]` This is where
-      consent/waiver capture at application time lands.
-- [ ] Check form answers (validation). `[PLAT-19]`
-- [ ] Set up file storage. `[PLAT-20]` Cloudflare R2 per the original
-      brief, though the ticket doesn't name a provider.
-- [ ] Build resume upload. `[PLAT-21]`
-- [ ] Save the application. `[PLAT-22]`
-- [ ] Send confirmation email. `[PLAT-23]` — blocked on PLAT-11.
-- [ ] Build "you're done" page. `[PLAT-24]`
-- [ ] Handle someone who already applied. `[PLAT-25]`
-- [ ] Application status states (submitted / under review / accepted /
-      rejected / waitlisted) and what each looks like to the applicant.
-      `[no ticket]` — the board covers submission but not the states
-      *after* it.
+- [x] School list + picker `[PLAT-14, PLAT-15]`
+- [ ] Form layout `[PLAT-16]`, questions `[PLAT-17]`, short answers and consent
+      `[PLAT-18]` — the *design* of all three is built; what's missing is real
+      state, validation and submission.
+- [ ] Validate answers `[PLAT-19]` — no validation exists at all.
+- [ ] File storage `[PLAT-20]` and resume upload `[PLAT-21]` — Supabase Storage
+      is the obvious fit now, rather than standing up R2 separately.
+- [ ] Save the application `[PLAT-22]` — blocked on PLAT-9.
+- [ ] Confirmation email `[PLAT-23]` — blocked on PLAT-11.
+- [ ] "You're done" page `[PLAT-24]` — designed and built cosmetically.
+- [ ] Handle someone who already applied `[PLAT-25]` — a uniqueness check on
+      (Discord user, event) once auth and tables exist.
+- [ ] Application states: submitted / under review / accepted / rejected /
+      waitlisted, and what each looks like to the applicant `[no ticket]`
+- [ ] **Real copy for the two short-answer questions** — currently Knight
+      Hacks' wording, marked `[PLACEHOLDER]` in the UI. A content decision.
 
-## Phase 4 — Wire the six existing pages to real data
+## Phase 4 — Wire the six portal pages to real data
 
-**No tickets exist for any of this.** Every page below renders
-placeholders from `src/lib/placeholder-data.ts` today.
-
-- [ ] Dashboard: real acceptance status, real checklist state (waiver
-      completion, Discord join, attendance confirmation), real event
-      date/venue (replace `[DATE]`, `[VENUE]` placeholders). `[no ticket]`
-- [ ] Profile: load/save real hacker data; wire "SAVE PROFILE CHANGES"
-      to an actual mutation. `[no ticket]`
-- [ ] Team: real team creation/join-by-code/leave, replacing the
-      `useState` toggle; real invite codes. `[no ticket]`
-- [ ] Guide: real venue/wifi/what-to-bring content per event (replace
-      `[VENUE]`, `[WIFI-NAME]`, `[ADDRESS]`, `[LOT NAME]` placeholders).
-      `[no ticket]`
-- [ ] Schedule: real per-event schedule data, replacing the `[T0]`...`[T8]`
-      placeholder rows. `[no ticket]`
-- [ ] Help: real form submission, routed to organizers somehow (email?
-      a dashboard inbox?). `[no ticket]`
+**No tickets exist for any of this.** Dashboard, Profile, Team, Guide, Schedule
+and Help all still render from `placeholder-data.ts`. Replace `[DATE]`,
+`[VENUE]`, `[WIFI-NAME]`, `[T0]`…`[T8]` and wire the Profile save and Help
+submit.
 
 ## Phase 5 — QR badge check-in
 
-**No tickets exist for any of this.**
-
-- [ ] Generate real QR codes (replace `QrPlaceholder`) encoding
-      something an organizer scanner can validate. `[no ticket]`
-- [ ] Organizer-side scanning UI (not designed yet). `[no ticket]`
-- [ ] Check-in state that actually gates "show this at check-in for
-      meals & swag." `[no ticket]`
+**No tickets exist.** `QrPlaceholder` encodes nothing; the organizer-side
+scanner isn't designed.
 
 ## Phase 6 — Organizer dashboard + sponsor portal
 
-- [ ] Design pass first (see "Not yet designed" above). `[no ticket]`
-- [ ] Build application list. `[PLAT-28]`
-- [ ] Organizers open resumes. `[PLAT-30]`
-- [ ] Download as spreadsheet button. `[PLAT-29]`
-- [ ] Application review — accept/reject/waitlist actions. `[no ticket]`
-      PLAT-28 lists applications; nothing files the *decision* actions.
-- [ ] Sponsor-facing resume search/download, with whatever access
-      control that needs. `[no ticket]`
+- [ ] Design pass first `[no ticket]`
+- [ ] Application list `[PLAT-28]`, open resumes `[PLAT-30]`, spreadsheet
+      export `[PLAT-29]`
+- [ ] Accept/reject/waitlist actions `[no ticket]` — PLAT-28 lists
+      applications; nothing files the *decisions*.
+- [ ] Sponsor-facing resume access `[no ticket]`
 
-## Phase 7 — Testing, launch readiness & deployment
+## Phase 7 — Testing & launch readiness
 
-- [ ] Get site deploying. `[PLAT-10]`
-- [ ] Decide on a testing strategy (none exists yet — this was explicitly
-      out of scope for the static-UI session). `[no ticket]`
-- [ ] Fill with 50 applications (load/realism check). `[PLAT-31]`
-- [ ] Test on phones. `[PLAT-32]` Overlaps the mobile-breakpoint loose
-      end below.
-- [ ] Check emails arrive. `[PLAT-33]`
-- [ ] Real deployment config beyond `create-next-app` defaults (env vars
-      for DB connection, R2 credentials, Auth.js secrets, etc.).
-      `[no ticket — PLAT-10 may absorb this]`
+- [x] Site deploying `[PLAT-10]`
+- [ ] Testing strategy — still none `[no ticket]`
+- [ ] Fill with 50 applications `[PLAT-31]`, test on phones `[PLAT-32]`, check
+      emails arrive `[PLAT-33]`
 
 ## Content & compliance
 
-- [ ] Privacy page. `[PLAT-34]`
-- [ ] Send reminder for MLH registration a week before the event.
-      `[PLAT-26]` — blocked on PLAT-11. Note this is a *reminder to go
-      register elsewhere*: MLH registration happens in OrganizerHQ, and
-      this app never owns it (see CLAUDE.md).
+- [ ] Privacy page `[PLAT-34]` (labelled `maybe`)
+- [ ] MLH registration reminder a week out `[PLAT-26]` — blocked on PLAT-11.
+      Note this is a reminder to register *elsewhere*: MLH registration lives
+      in OrganizerHQ and this app never owns it.
 
 ## Smaller loose ends
 
-- [ ] The dashboard's waiver checklist item currently toggles local
-      component state with no persistence — needs a real "waiver
-      completed" field once Phase 1/3 exist. `[no ticket]`
-- [ ] Dashboard has two hardcoded strings that bypass
-      `placeholder-data.ts`: the `YOU'RE ACCEPTED / TO HACKJAM '26`
-      heading and `NOT FORMED · FIND TEAMMATES`, even though
-      `dashboardStatus.eventName`/`.headline` exist. Minor now, but the
-      "delete placeholder-data.ts cleanly" plan depends on catching
-      these. `[no ticket]`
-- [ ] Confirm the mobile sidebar-collapse breakpoint and drawer pattern
-      (built as a judgment call, no mobile spec existed) — worth a real
-      design/product review once actual organizers give feedback on
-      using this at the door. Related: PLAT-32.
-- [ ] Package manager drift: `pnpm-lock.yaml` and a pnpm-shaped
-      `node_modules` appeared alongside the npm setup. Repo is npm by
-      convention (CLAUDE.md) but nothing enforces it — consider a
-      `packageManager` field in `package.json`. `[no ticket]`
-- [ ] **Board hygiene:** PLAT-4 ("Delegate this work item to Claude") and
-      PLAT-5 ("Implement this work item from your IDE or terminal") are
-      Jira's default onboarding sample subtasks, not real work. Delete
-      them.
+- [ ] **A fresh clone doesn't build.** It needs a local `.env` *and*
+      `npx prisma generate` — `prisma.config.ts` reads `DIRECT_URL` and
+      `src/lib/prisma.ts` imports the generated client. Vercel has the env
+      vars so the deploy is fine; nobody cloning gets a working build. Two
+      lines in the README would fix it. `[no ticket]`
+- [ ] The dashboard waiver checklist toggles local state with no persistence.
+- [ ] Dashboard hardcodes `YOU'RE ACCEPTED / TO HACKJAM '26` and
+      `NOT FORMED · FIND TEAMMATES` in JSX instead of `placeholder-data.ts`.
+- [ ] Confirm the mobile sidebar breakpoint with real organizers `[PLAT-32]`
+- [ ] **Board hygiene:** PLAT-4 and PLAT-5 are Jira's default sample subtasks.
+      Delete them.
