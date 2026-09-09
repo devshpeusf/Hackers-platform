@@ -108,3 +108,79 @@ export const scheduleItems: ScheduleRow[] = [
   { time: "[T7]", label: "Judging", highlighted: false },
   { time: "[T8]", label: "Closing ceremony & awards", highlighted: false },
 ];
+
+/* ------------------------------------------------------------------ *
+ * Application flow (PLAT-35 design, built cosmetically for PLAT-16).
+ * Nothing here submits anywhere — the wizard is client state only.
+ * ------------------------------------------------------------------ */
+
+export type ApplicationStep = {
+  /** "01".."05", shown in the rail and the section header. */
+  number: string;
+  /** Rail label. */
+  label: string;
+  /** Headline above the card. */
+  heading: string;
+  /** Left-column blurb inside the card. */
+  blurb: string;
+  /** Accent token for this step, matching the design's per-step colour. */
+  accent: string;
+  /**
+   * Altitude readout. Mirrors AltitudeHUD on the HackJam marketing site:
+   * applying is a descent from orbit to the surface.
+   */
+  zone: string;
+  altitude: string;
+  /** Earth diameter in the rail, px — the planet grows as you descend. */
+  earthPx: number;
+};
+
+export const applicationSteps: ApplicationStep[] = [
+  { number: "01", label: "BASICS", heading: "THE BASICS", accent: "var(--color-accent-teal)", zone: "LOW ORBIT", altitude: "402", earthPx: 46,
+    blurb: "Your name and how we reach you. Discord doesn't hand over an email, so we need one here." },
+  { number: "02", label: "ABOUT YOU", heading: "ABOUT YOU", accent: "var(--color-accent-purple-light)", zone: "NEBULA FIELD", altitude: "318", earthPx: 60,
+    blurb: "MLH requires date of birth, country, and level of study. Demographics are yours to skip." },
+  { number: "03", label: "SCHOOL", heading: "YOUR SCHOOL", accent: "var(--color-accent-pink-light)", zone: "UPPER ATMOSPHERE", altitude: "210", earthPx: 76,
+    blurb: "Searches the MLH-verified list \u2014 13,103 schools. Acronyms work: type \u201cusf\u201d." },
+  { number: "04", label: "EXPERIENCE", heading: "YOUR EXPERIENCE", accent: "var(--color-accent-pink)", zone: "SUNSET BAND", altitude: "096", earthPx: 96,
+    blurb: "Two short answers. Links and resume are optional \u2014 first-time hackers are welcome." },
+  { number: "05", label: "AGREEMENTS", heading: "THE FINE PRINT", accent: "var(--color-accent-amber)", zone: "SURFACE", altitude: "012", earthPx: 118,
+    blurb: "Exact MLH wording \u2014 don't paraphrase it. First two required, third opt-in." },
+];
+
+/**
+ * Verbatim MLH policy text from github.com/MLH/mlh-policies. Do not reword:
+ * MLH requires these exact sentences on an event registration.
+ */
+export const applicationConsent = [
+  { id: "coc", required: true, text: "I have read and agree to the MLH Code of Conduct." },
+  { id: "share", required: true, text: "I authorize you to share my application/registration information with Major League Hacking for event administration, ranking, and MLH administration in-line with the MLH Privacy Policy. I further agree to the terms of both the MLH Contest Terms and Conditions and the MLH Privacy Policy." },
+  { id: "emails", required: false, text: "I authorize MLH to send me occasional emails about relevant events, career opportunities, and community announcements." },
+];
+
+/** Shown next to the consent boxes while the MLH application is pending. */
+export const mlhPendingNotice =
+  "We have applied to be an MLH Hack Day. These checkboxes only apply if our application is accepted \u2014 your information will not be shared if we do not become an MLH event.";
+
+/**
+ * Static stand-in for the school typeahead. The real search lives in
+ * src/lib/schools.ts on the PLAT-14 branch; wiring it up is PLAT-15.
+ */
+export const schoolSuggestions = [
+  { name: "University of South Florida", note: "YOUR SCHOOL" },
+  { name: "The Academy of South Florida", note: "" },
+];
+
+export const applicationCopy = {
+  from: "hackjam26.com",
+  heading: "LET'S GET YOU\nSIGNED UP",
+  intro:
+    "Five short steps, about four minutes. Sign in with Discord \u2014 it's how we reach you about your application and how you get into the server.",
+  finePrint: "Applications close [DATE] \u00b7 we only read your username and ID.",
+  footerHint: "Answers save as you go \u00b7 you can finish later",
+  /** Placeholder questions \u2014 real copy is still a content decision. */
+  questions: [
+    "Why do you want to attend HackJam '26?",
+    "What do you hope to build or learn?",
+  ],
+};

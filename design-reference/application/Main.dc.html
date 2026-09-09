@@ -1,0 +1,423 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Mono:wght@400;700&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    a { color: #21e6c1; text-decoration: none; }
+    a:hover { color: #ff8fd6; }
+    .pxbtn { transition: transform 0.2s cubic-bezier(0.32,0.72,0,1), filter 0.2s; }
+    .pxbtn:hover { transform: translateY(-2px); filter: brightness(1.1); }
+    .navrow { transition: background 0.15s ease-out; }
+    .navrow:hover { background: rgba(244,241,251,0.05) !important; }
+    .stepin { animation: stepin 0.3s cubic-bezier(0.32,0.72,0,1) both; }
+    @keyframes stepin {
+      from { opacity: 0; transform: translateX(16px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    .bob { animation: bob 3.4s ease-in-out infinite; }
+    @keyframes bob {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-7px); }
+    }
+    .blink { animation: blink 1.05s steps(2, start) infinite; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    .orbit { position: absolute; inset: 0; transform-origin: 50% 50%; }
+    .orbit-a { animation: orbit 17s linear infinite; }
+    .orbit-b { animation: orbit 26s linear infinite reverse; }
+    .orbit-c { animation: orbit 34s linear infinite; }
+    @keyframes orbit { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .ring { position: absolute; border-radius: 50%; border: 1px dashed rgba(244,241,251,0.07); }
+    .drift { animation: drift 9s ease-in-out infinite; }
+    .drift-b { animation: drift 12s ease-in-out infinite reverse; }
+    .drift-c { animation: drift 15s ease-in-out infinite; }
+    @keyframes drift { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+  </style>
+</helmet>
+
+<div style="width: 1280px; height: 880px; overflow: hidden; background-color: #07060d; background-image: radial-gradient(1.5px 1.5px at 27.1% 24.6%, rgba(244,241,251,0.55), transparent), radial-gradient(1px 1px at 56.9% 44.4%, rgba(244,241,251,0.55), transparent), radial-gradient(2px 2px at 16.9% 80.8%, rgba(244,241,251,0.45), transparent), radial-gradient(1.2px 1.2px at 72.5% 24.8%, rgba(244,241,251,0.45), transparent), radial-gradient(2.4px 2.4px at 21.0% 54.4%, rgba(244,241,251,0.45), transparent), radial-gradient(1.2px 1.2px at 40.5% 3.1%, rgba(244,241,251,0.7), transparent), radial-gradient(1px 1px at 92.6% 38.1%, rgba(244,241,251,0.45), transparent), radial-gradient(1.2px 1.2px at 32.7% 35.2%, rgba(244,241,251,0.7), transparent), radial-gradient(1.5px 1.5px at 74.6% 47.0%, rgba(244,241,251,0.55), transparent), radial-gradient(1.5px 1.5px at 35.3% 1.3%, rgba(244,241,251,0.55), transparent), radial-gradient(1.5px 1.5px at 10.9% 85.5%, #f4f1fb, transparent), radial-gradient(2.4px 2.4px at 34.5% 81.9%, rgba(244,241,251,0.8), transparent), radial-gradient(2.4px 2.4px at 68.0% 39.1%, rgba(244,241,251,0.35), transparent), radial-gradient(1.5px 1.5px at 46.9% 42.8%, rgba(244,241,251,0.35), transparent), radial-gradient(1.5px 1.5px at 92.6% 62.8%, rgba(244,241,251,0.45), transparent), radial-gradient(1.5px 1.5px at 44.0% 14.3%, rgba(244,241,251,0.7), transparent), radial-gradient(2.4px 2.4px at 10.2% 50.5%, rgba(244,241,251,0.8), transparent), radial-gradient(1.2px 1.2px at 36.3% 30.5%, rgba(244,241,251,0.35), transparent), radial-gradient(1.5px 1.5px at 33.8% 79.4%, rgba(244,241,251,0.8), transparent), radial-gradient(2px 2px at 96.4% 54.5%, rgba(244,241,251,0.55), transparent), radial-gradient(2.4px 2.4px at 29.1% 13.0%, rgba(244,241,251,0.45), transparent), radial-gradient(1.5px 1.5px at 78.8% 29.8%, rgba(244,241,251,0.45), transparent), radial-gradient(1.5px 1.5px at 98.6% 89.5%, rgba(244,241,251,0.55), transparent), radial-gradient(1.8px 1.8px at 32.7% 12.4%, rgba(244,241,251,0.45), transparent), radial-gradient(1.5px 1.5px at 17.4% 57.6%, rgba(244,241,251,0.55), transparent), radial-gradient(1px 1px at 16.3% 53.3%, #f4f1fb, transparent), radial-gradient(1.8px 1.8px at 15.6% 47.0%, rgba(244,241,251,0.55), transparent), radial-gradient(1.2px 1.2px at 90.2% 8.8%, rgba(244,241,251,0.45), transparent), radial-gradient(1.8px 1.8px at 10.1% 68.7%, rgba(244,241,251,0.55), transparent), radial-gradient(1px 1px at 28.6% 86.3%, #f4f1fb, transparent), radial-gradient(1.2px 1.2px at 54.9% 86.4%, rgba(244,241,251,0.55), transparent), radial-gradient(1.5px 1.5px at 25.0% 34.2%, #f4f1fb, transparent), radial-gradient(1.5px 1.5px at 76.6% 36.0%, rgba(244,241,251,0.8), transparent), radial-gradient(1.2px 1.2px at 92.0% 29.3%, rgba(244,241,251,0.55), transparent), radial-gradient(1.5px 1.5px at 57.1% 47.1%, #f4f1fb, transparent), radial-gradient(1px 1px at 21.8% 55.7%, #f4f1fb, transparent), radial-gradient(2.4px 2.4px at 29.4% 21.1%, rgba(244,241,251,0.55), transparent), radial-gradient(1px 1px at 44.0% 3.9%, rgba(244,241,251,0.8), transparent), radial-gradient(1px 1px at 70.4% 83.0%, rgba(244,241,251,0.7), transparent), radial-gradient(1.5px 1.5px at 66.6% 68.7%, #f4f1fb, transparent), radial-gradient(1px 1px at 8.3% 5.8%, rgba(244,241,251,0.45), transparent), radial-gradient(1.2px 1.2px at 17.5% 36.8%, rgba(244,241,251,0.35), transparent), radial-gradient(1.2px 1.2px at 37.8% 49.6%, rgba(244,241,251,0.8), transparent), radial-gradient(1.5px 1.5px at 36.6% 25.8%, rgba(244,241,251,0.55), transparent), radial-gradient(2px 2px at 6.2% 60.0%, #f4f1fb, transparent), radial-gradient(1.5px 1.5px at 83.2% 32.0%, rgba(244,241,251,0.8), transparent), radial-gradient(1.8px 1.8px at 91.3% 60.7%, rgba(244,241,251,0.55), transparent), radial-gradient(1.5px 1.5px at 17.2% 32.3%, rgba(244,241,251,0.55), transparent), radial-gradient(1.2px 1.2px at 34.5% 31.2%, rgba(244,241,251,0.8), transparent), radial-gradient(2px 2px at 36.6% 66.0%, rgba(244,241,251,0.45), transparent), radial-gradient(1px 1px at 23.6% 4.2%, rgba(244,241,251,0.7), transparent), radial-gradient(1.8px 1.8px at 93.0% 71.9%, #f4f1fb, transparent), radial-gradient(1px 1px at 91.8% 37.3%, rgba(244,241,251,0.45), transparent), radial-gradient(2.4px 2.4px at 45.5% 50.9%, rgba(244,241,251,0.45), transparent), radial-gradient(2.4px 2.4px at 27.3% 69.2%, rgba(244,241,251,0.7), transparent), radial-gradient(1.5px 1.5px at 52.2% 32.2%, rgba(244,241,251,0.45), transparent), radial-gradient(1px 1px at 77.4% 61.4%, rgba(244,241,251,0.35), transparent), radial-gradient(1px 1px at 91.6% 15.9%, #f4f1fb, transparent), radial-gradient(1.8px 1.8px at 98.6% 14.0%, rgba(244,241,251,0.35), transparent), radial-gradient(1.2px 1.2px at 25.9% 31.4%, rgba(244,241,251,0.45), transparent), radial-gradient(1px 1px at 51.6% 29.1%, rgba(244,241,251,0.55), transparent), radial-gradient(1.5px 1.5px at 55.3% 45.7%, rgba(244,241,251,0.7), transparent), radial-gradient(2.4px 2.4px at 42.4% 57.5%, rgba(244,241,251,0.7), transparent), radial-gradient(1px 1px at 43.0% 22.9%, #f4f1fb, transparent), radial-gradient(2.4px 2.4px at 38.3% 49.8%, rgba(244,241,251,0.35), transparent), radial-gradient(1.5px 1.5px at 52.3% 34.4%, rgba(244,241,251,0.45), transparent), radial-gradient(2.4px 2.4px at 36.5% 2.0%, #f4f1fb, transparent), radial-gradient(2.4px 2.4px at 15.2% 50.0%, #f4f1fb, transparent), radial-gradient(1.5px 1.5px at 14.8% 12.1%, rgba(244,241,251,0.8), transparent), radial-gradient(1.2px 1.2px at 79.0% 59.0%, rgba(244,241,251,0.8), transparent), radial-gradient(1.5px 1.5px at 36.3% 8.0%, rgba(244,241,251,0.55), transparent), radial-gradient(1.2px 1.2px at 97.2% 10.5%, rgba(244,241,251,0.35), transparent), radial-gradient(1px 1px at 85.9% 98.9%, #f4f1fb, transparent), radial-gradient(2.4px 2.4px at 15.4% 66.0%, rgba(244,241,251,0.35), transparent), radial-gradient(1.8px 1.8px at 6.6% 12.6%, rgba(244,241,251,0.7), transparent), radial-gradient(2px 2px at 50.9% 46.1%, rgba(244,241,251,0.55), transparent), radial-gradient(2.4px 2.4px at 58.6% 45.9%, rgba(244,241,251,0.7), transparent), radial-gradient(1.5px 1.5px at 22.5% 69.7%, rgba(244,241,251,0.8), transparent), radial-gradient(1px 1px at 50.1% 83.3%, #f4f1fb, transparent), radial-gradient(1px 1px at 64.0% 12.3%, rgba(244,241,251,0.7), transparent), radial-gradient(1px 1px at 95.6% 41.2%, #f4f1fb, transparent), radial-gradient(1.5px 1.5px at 2.6% 20.6%, rgba(244,241,251,0.35), transparent), radial-gradient(1.2px 1.2px at 60.4% 41.6%, rgba(244,241,251,0.45), transparent), radial-gradient(1.5px 1.5px at 96.2% 76.1%, rgba(244,241,251,0.8), transparent), radial-gradient(1px 1px at 29.4% 19.1%, rgba(244,241,251,0.8), transparent), radial-gradient(2px 2px at 92.1% 42.1%, rgba(244,241,251,0.55), transparent), radial-gradient(2px 2px at 62.5% 16.6%, rgba(33,230,193,0.75), transparent), radial-gradient(2px 2px at 34.2% 37.5%, rgba(255,143,214,0.75), transparent), radial-gradient(2px 2px at 24.3% 49.0%, rgba(197,139,255,0.75), transparent), radial-gradient(900px 700px at 12% 0%, rgba(91,47,143,0.3), transparent 60%), radial-gradient(800px 650px at 92% 88%, rgba(156,47,125,0.24), transparent 60%); font-family: 'Space Mono', monospace; color: #f4f1fb; display: flex;">
+
+  <!-- ================= LEFT RAIL (hidden pre-auth) ================= -->
+  <sc-if value="{{ showRail }}" hint-placeholder-val="{{ true }}">
+    <div style="width: 262px; flex-shrink: 0; background: #0c0a14; border-right: 4px solid #1a1530; padding: 28px 18px; display: flex; flex-direction: column;">
+      <img src="hackjam26-words.png" alt="HackJam '26" style="width: 138px; height: auto; display: block; margin: 0 0 10px 4px; image-rendering: pixelated;">
+      <div style="margin: 0 0 22px 4px; font-family: 'Press Start 2P', monospace; font-size: 7px; letter-spacing: 0.14em; color: #63607a;">APPLICATION</div>
+
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <sc-for list="{{ steps }}" as="s" hint-placeholder-count="5">
+          <div class="navrow" style="{{ s.rowStyle }}">
+            <span style="{{ s.dotStyle }}"></span>
+            <span style="{{ s.numStyle }}">{{ s.n }}</span>
+            <span style="{{ s.labelStyle }}">{{ s.label }}</span>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="flex-grow: 1; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 22px;">
+        <div style="text-align: center;">
+          <img src="earth.webp" alt="" style="{{ earthStyle }}">
+          <div style="margin-top: 9px; font-family: 'Press Start 2P', monospace; font-size: 7px; letter-spacing: 0.12em; color: #63607a;">{{ zone }}</div>
+        </div>
+      </div>
+
+      <img src="shpe-usf.png" alt="SHPE USF" style="width: 150px; height: auto; opacity: 0.82; margin-bottom: 16px;">
+      <div style="font-size: 10px; letter-spacing: 0.04em; color: #63607a;">MREYES &#183; DISCORD ACCOUNT</div>
+    </div>
+  </sc-if>
+
+  <!-- ================= CONTENT ================= -->
+  <div style="flex-grow: 1; display: flex; flex-direction: column; padding: 38px 44px;">
+
+    <!-- ===== STEP 0 — SIGN IN (full bleed, no rail) ===== -->
+    <sc-if value="{{ isSignIn }}" hint-placeholder-val="{{ true }}">
+      <div class="stepin" style="flex-grow: 1; display: flex; flex-direction: column;">
+        <div style="display: flex; align-items: center; gap: 10px; padding-bottom: 15px; border-bottom: 1px solid rgba(244,241,251,0.07); font-size: 11px; color: #63607a;">
+          <span>hackjam26.com</span><span style="color: #7d7896;">&#8594;</span><span style="color: #21e6c1;">apply</span>
+          <div style="flex-grow: 1;"></div>
+          <img src="shpe-usf.png" alt="SHPE USF" style="width: 124px; height: auto; opacity: 0.7;">
+        </div>
+
+        <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+          <img src="logo-levitate.webp" alt="HackJam '26" style="width: 264px; height: auto; margin-bottom: 26px; image-rendering: pixelated; filter: drop-shadow(0 0 40px rgba(255,46,151,0.3));">
+          <h1 style="font-family: 'Press Start 2P', monospace; font-size: 25px; line-height: 1.7; margin: 0 0 20px;">LET&#39;S GET YOU<br>SIGNED UP</h1>
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
+            <span style="width: 4px; height: 4px; background: #21e6c1; opacity: 0.5;"></span>
+            <span style="width: 6px; height: 6px; background: #21e6c1;"></span>
+            <span style="width: 4px; height: 4px; background: #21e6c1; opacity: 0.5;"></span>
+          </div>
+          <p style="max-width: 430px; font-size: 13px; line-height: 1.85; color: #9a94b0; margin: 0 0 30px;">Five short steps, about four minutes. Sign in with Discord &#8212; it&#39;s how we reach you about your application and how you get into the server.</p>
+          <button class="pxbtn" onClick="{{ start }}" style="display: inline-flex; align-items: center; justify-content: center; gap: 10px; font-family: 'Space Mono', monospace; font-weight: 700; letter-spacing: 0.025em; background: #ff2e97; color: #07060d; padding: 15px 30px; font-size: 12px; border: 0; cursor: pointer; box-shadow: 0 -4px 0 0 #ff2e97, 0 4px 0 0 #ff2e97, -4px 0 0 0 #ff2e97, 4px 0 0 0 #ff2e97, 0 0 20px 0 rgba(255,46,151,0.4);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#07060d" aria-hidden="true"><path d="M20.317 4.3698a19.7913 19.7913 0 0 0-4.8851-1.5152.0741.0741 0 0 0-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 0 0-.0785-.037 19.7363 19.7363 0 0 0-4.8852 1.515.0699.0699 0 0 0-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 0 0 .0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 0 0 .0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 0 0-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 0 1-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 0 1 .0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 0 1 .0785.0095c.1202.099.246.198.3728.2924a.077.077 0 0 1-.0066.1276 12.2986 12.2986 0 0 1-1.873.8914.0766.0766 0 0 0-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 0 0 .0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 0 0 .0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 0 0-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189z"/></svg>
+            SIGN IN WITH DISCORD
+          </button>
+          <p style="margin: 18px 0 0; font-size: 11px; color: #63607a;">Applications close [DATE] &#183; we only read your username and ID.</p>
+      </div>
+    </sc-if>
+
+    <!-- ===== WIZARD HEADER ===== -->
+    <sc-if value="{{ showRail }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 20px;">
+        <div>
+          <h1 style="font-family: 'Press Start 2P', monospace; font-size: 20px; margin: 0 0 14px; color: #f4f1fb;">{{ headline }}</h1>
+          <div style="display: flex; gap: 6px;">
+            <sc-for list="{{ blocks }}" as="b" hint-placeholder-count="5">
+              <div style="{{ b.style }}"></div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="text-align: right;">
+          <div style="display: flex; align-items: baseline; justify-content: flex-end; gap: 8px; margin-bottom: 7px;">
+            <span style="font-family: 'Press Start 2P', monospace; font-size: 7px; letter-spacing: 0.12em; color: #63607a;">ALT</span>
+            <span style="{{ altStyle }}">{{ altKm }}</span>
+            <span style="font-family: 'Press Start 2P', monospace; font-size: 7px; letter-spacing: 0.12em; color: #63607a;">KM</span>
+          </div>
+          <div style="font-family: 'Press Start 2P', monospace; font-size: 8px; letter-spacing: 0.12em; color: #7d7896; margin-bottom: 6px;">{{ stepLabel }}</div>
+          <div style="font-size: 11px; color: #63607a;">~{{ minsLeft }} min left</div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ===== STEP 1 — BASICS (teal) ===== -->
+    <sc-if value="{{ isS1 }}" hint-placeholder-val="{{ true }}">
+      <div class="stepin" style="position: relative; flex-grow: 1; padding: 30px 28px; background: linear-gradient(135deg, rgba(244,241,251,0.06) 0 12px, transparent 12px), linear-gradient(315deg, rgba(33,230,193,0.3) 0 10px, transparent 10px), rgba(18,15,31,0.92); box-shadow: 0 -4px 0 0 #21e6c1, 0 4px 0 0 #21e6c1, -4px 0 0 0 #21e6c1, 4px 0 0 0 #21e6c1, inset 0 4px 0 0 rgba(244,241,251,0.06), inset 0 -4px 0 0 rgba(7,6,13,0.45); display: flex; gap: 34px;">
+        <div style="width: 196px; flex-shrink: 0;">
+          <div style="font-family: 'Press Start 2P', monospace; font-size: 9px; color: #21e6c1; margin-bottom: 11px;">01</div>
+          <div style="font-size: 13px; font-weight: 700; letter-spacing: 0.025em; margin-bottom: 10px;">BASICS</div>
+          <div style="font-size: 12px; line-height: 1.65; color: #9a94b0;">Your name and how we reach you. Discord doesn&#39;t hand over an email, so we need one here.</div>
+        </div>
+        <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 19px;">
+          <div style="display: flex; gap: 18px;">
+            <div style="flex-grow: 1;">
+              <div style="margin-bottom: 8px; font-size: 12px;">First Name</div>
+              <div style="background: rgba(7,6,13,0.6); border: 1px solid rgba(244,241,251,0.14); padding: 12px 14px; font-size: 13px;">Mariana</div>
+            </div>
+            <div style="flex-grow: 1;">
+              <div style="margin-bottom: 8px; font-size: 12px;">Last Name</div>
+              <div style="background: rgba(7,6,13,0.6); border: 1px solid rgba(244,241,251,0.14); padding: 12px 14px; font-size: 13px;">Reyes</div>
+            </div>
+          </div>
+          <div>
+            <div style="margin-bottom: 8px; font-size: 12px;">Email</div>
+            <div style="background: rgba(7,6,13,0.6); border: 1px solid rgba(33,230,193,0.55); padding: 12px 14px; font-size: 13px; box-shadow: 0 0 0 3px rgba(33,230,193,0.1);">mariana@usf.edu<span class="blink" style="color: #21e6c1;">|</span></div>
+          </div>
+          <div style="display: flex; gap: 18px;">
+            <div style="flex-grow: 1;">
+              <div style="margin-bottom: 8px; font-size: 12px;">Phone</div>
+              <div style="background: rgba(7,6,13,0.6); border: 1px solid rgba(244,241,251,0.14); padding: 12px 14px; font-size: 13px; color: #7d7896;">(___) ___-____</div>
+            </div>
+            <div style="flex-grow: 1;">
+              <div style="margin-bottom: 8px; font-size: 12px;">Discord <span style="color: #63607a;">from sign-in</span></div>
+              <div style="background: rgba(7,6,13,0.35); border: 1px solid rgba(244,241,251,0.07); padding: 12px 14px; font-size: 13px; color: #63607a; display: flex; align-items: center; gap: 8px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#63607a" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 4.5h7l3 5.5v6l-4 3-1-2m-8 0-1 2-4-3v-6l3-5.5"></path></svg>
+                mreyes
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ===== STEP 2 — ABOUT YOU (purple) ===== -->
+    <sc-if value="{{ isS2 }}" hint-placeholder-val="{{ true }}">
+      <div class="stepin" style="position: relative; flex-grow: 1; padding: 30px 28px; background: linear-gradient(135deg, rgba(244,241,251,0.06) 0 12px, transparent 12px), linear-gradient(315deg, rgba(91,47,143,0.3) 0 10px, transparent 10px), rgba(18,15,31,0.92); box-shadow: 0 -4px 0 0 #5b2f8f, 0 4px 0 0 #5b2f8f, -4px 0 0 0 #5b2f8f, 4px 0 0 0 #5b2f8f, inset 0 4px 0 0 rgba(244,241,251,0.06), inset 0 -4px 0 0 rgba(7,6,13,0.45); display: flex; gap: 34px;">
+        <div style="width: 196px; flex-shrink: 0;">
+          <div style="font-family: 'Press Start 2P', monospace; font-size: 9px; color: #c58bff; margin-bottom: 11px;">02</div>
+          <div style="font-size: 13px; font-weight: 700; letter-spacing: 0.025em; margin-bottom: 10px;">ABOUT YOU</div>
+          <div style="font-size: 12px; line-height: 1.65; color: #9a94b0;">MLH requires date of birth, country, and level of study. Demographics are yours to skip.</div>
+        </div>
+        <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 19px;">
+          <div style="display: flex; gap: 18px;">
+            <div style="flex-grow: 1;">
+              <div style="margin-bottom: 8px; font-size: 12px;">Date of Birth</div>
+              <div style="background: rgba(7,6,13,0.6); border: 1px solid rgba(244,241,251,0.14); padding: 12px 14px; font-size: 13px; color: #c7c2dc;">2004 &#183; 03 &#183; 18</div>
+            </div>
+            <div style="flex-grow: 1;">
+              <div style="margin-bottom: 8px; font-size: 12px;">Country of Residence</div>
+              <div style="background: rgba(7,6,13,0.6); border: 1px solid rgba(244,241,251,0.14); padding: 12px 14px; font-size: 13px; display: flex; align-items: center; justify-content: space-between;"><span>United States</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c58bff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+            </div>
+          </div>
+          <div>
+            <div style="margin-bottom: 8px; font-size: 12px;">Level of Study</div>
+            <div style="background: rgba(7,6,13,0.6); border: 1px solid rgba(244,241,251,0.14); padding: 12px 14px; font-size: 13px; display: flex; align-items: center; justify-content: space-between;"><span>Undergraduate University (3+ year)</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c58bff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+          </div>
+          <div style="display: flex; gap: 18px;">
+            <div style="flex-grow: 1;">
+              <div style="margin-bottom: 8px; font-size: 12px;">Gender <span style="color: #7d7896; font-style: italic;">Optional</span></div>
+              <div style="background: rgba(7,6,13,0.6); border: 1px solid rgba(244,241,251,0.14); padding: 12px 14px; font-size: 13px; color: #7d7896;">Prefer not to answer</div>
+            </div>
+            <div style="flex-grow: 1;">
+              <div style="margin-bottom: 8px; font-size: 12px;">Race / Ethnicity <span style="color: #7d7896; font-style: italic;">Optional</span></div>
+              <div style="background: rgba(7,6,13,0.6); border: 1px solid rgba(244,241,251,0.14); padding: 12px 14px; font-size: 13px; color: #7d7896;">Prefer not to answer</div>
+            </div>
+          </div>
+          <div style="border-left: 3px solid #5b2f8f; padding: 10px 13px; background: rgba(91,47,143,0.12); font-size: 11px; line-height: 1.7; color: #9a94b0;">SHPE is a Hispanic-serving organization, but HackJam is open to every USF student regardless of background.</div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ===== STEP 3 — SCHOOL (magenta / pink-light) ===== -->
+    <sc-if value="{{ isS3 }}" hint-placeholder-val="{{ true }}">
+      <div class="stepin" style="position: relative; flex-grow: 1; padding: 30px 28px; background: linear-gradient(135deg, rgba(244,241,251,0.06) 0 12px, transparent 12px), linear-gradient(315deg, rgba(156,47,125,0.3) 0 10px, transparent 10px), rgba(18,15,31,0.92); box-shadow: 0 -4px 0 0 #9c2f7d, 0 4px 0 0 #9c2f7d, -4px 0 0 0 #9c2f7d, 4px 0 0 0 #9c2f7d, inset 0 4px 0 0 rgba(244,241,251,0.06), inset 0 -4px 0 0 rgba(7,6,13,0.45); display: flex; gap: 34px;">
+        <div style="width: 196px; flex-shrink: 0;">
+          <div style="font-family: 'Press Start 2P', monospace; font-size: 9px; color: #ff8fd6; margin-bottom: 11px;">03</div>
+          <div style="font-size: 13px; font-weight: 700; letter-spacing: 0.025em; margin-bottom: 10px;">SCHOOL</div>
+          <div style="font-size: 12px; line-height: 1.65; color: #9a94b0;">Searches the MLH-verified list &#8212; 13,103 schools. Acronyms work: type &#8220;usf&#8221;.</div>
+        </div>
+        <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 19px;">
+          <div>
+            <div style="margin-bottom: 8px; font-size: 12px;">School</div>
+            <div style="background: rgba(7,6,13,0.6); border: 1px solid rgba(255,143,214,0.55); padding: 12px 14px; font-size: 13px;">South Fl<span class="blink" style="color: #ff8fd6;">|</span></div>
+            <div style="background: #07060d; box-shadow: 0 -2px 0 0 #ff8fd6, 0 2px 0 0 #ff8fd6, -2px 0 0 0 #ff8fd6, 2px 0 0 0 #ff8fd6; margin-top: 7px;">
+              <div style="padding: 11px 14px; font-size: 13px; background: rgba(255,143,214,0.1); color: #ff8fd6; display: flex; justify-content: space-between;"><span>University of <strong>South Fl</strong>orida</span><span style="font-size: 10px; color: #63607a;">YOUR SCHOOL</span></div>
+              <div style="padding: 11px 14px; font-size: 13px; color: #c7c2dc; border-top: 1px solid rgba(244,241,251,0.06);">The Academy of <strong>South Fl</strong>orida</div>
+              <div style="padding: 10px 14px; font-size: 12px; color: #7d7896; border-top: 1px solid rgba(244,241,251,0.06); font-style: italic;">Not listed? Enter it manually &#8212; <span style="color: #ffd9a0;">needs a decision, see note</span></div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 18px;">
+            <div style="flex-grow: 1;">
+              <div style="margin-bottom: 8px; font-size: 12px;">Major</div>
+              <div style="background: rgba(7,6,13,0.6); border: 1px solid rgba(244,241,251,0.14); padding: 12px 14px; font-size: 13px;">Computer Engineering</div>
+            </div>
+            <div style="flex-grow: 1;">
+              <div style="margin-bottom: 8px; font-size: 12px;">Graduation</div>
+              <div style="background: rgba(7,6,13,0.6); border: 1px solid rgba(244,241,251,0.14); padding: 12px 14px; font-size: 13px; color: #c7c2dc;">2027 &#183; 05</div>
+            </div>
+            <div style="width: 132px;">
+              <div style="margin-bottom: 8px; font-size: 12px;">Shirt Size</div>
+              <div style="background: rgba(7,6,13,0.6); border: 1px solid rgba(244,241,251,0.14); padding: 12px 14px; font-size: 13px;">M</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ===== STEP 4 — EXPERIENCE (pink) ===== -->
+    <sc-if value="{{ isS4 }}" hint-placeholder-val="{{ true }}">
+      <div class="stepin" style="position: relative; flex-grow: 1; padding: 30px 28px; background: linear-gradient(135deg, rgba(244,241,251,0.06) 0 12px, transparent 12px), linear-gradient(315deg, rgba(255,46,151,0.3) 0 10px, transparent 10px), rgba(18,15,31,0.92); box-shadow: 0 -4px 0 0 #ff2e97, 0 4px 0 0 #ff2e97, -4px 0 0 0 #ff2e97, 4px 0 0 0 #ff2e97, inset 0 4px 0 0 rgba(244,241,251,0.06), inset 0 -4px 0 0 rgba(7,6,13,0.45); display: flex; gap: 34px;">
+        <div style="width: 196px; flex-shrink: 0;">
+          <div style="font-family: 'Press Start 2P', monospace; font-size: 9px; color: #ff2e97; margin-bottom: 11px;">04</div>
+          <div style="font-size: 13px; font-weight: 700; letter-spacing: 0.025em; margin-bottom: 10px;">EXPERIENCE</div>
+          <div style="font-size: 12px; line-height: 1.65; color: #9a94b0;">Two short answers. Links and resume are optional &#8212; first-time hackers are welcome.</div>
+        </div>
+        <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 15px;">
+          <div>
+            <div style="margin-bottom: 7px; font-size: 12px;">Why do you want to attend HackJam &#39;26? <span style="color: #ffd9a0;">[PLACEHOLDER]</span></div>
+            <div style="background: rgba(7,6,13,0.6); border: 1px solid rgba(244,241,251,0.14); padding: 12px 14px; font-size: 13px; height: 66px; color: #7d7896;">A few sentences is plenty&#8230;</div>
+          </div>
+          <div>
+            <div style="margin-bottom: 7px; font-size: 12px;">What do you hope to build or learn? <span style="color: #ffd9a0;">[PLACEHOLDER]</span></div>
+            <div style="background: rgba(7,6,13,0.6); border: 1px solid rgba(244,241,251,0.14); padding: 12px 14px; font-size: 13px; height: 66px; color: #7d7896;">A few sentences is plenty&#8230;</div>
+          </div>
+          <div style="display: flex; gap: 18px;">
+            <div style="flex-grow: 1;">
+              <div style="margin-bottom: 7px; font-size: 12px;">GitHub <span style="color: #7d7896; font-style: italic;">Optional</span></div>
+              <div style="background: rgba(7,6,13,0.6); border: 1px solid rgba(244,241,251,0.14); padding: 11px 14px; font-size: 13px; color: #7d7896;">username or URL</div>
+            </div>
+            <div style="flex-grow: 1;">
+              <div style="margin-bottom: 7px; font-size: 12px;">LinkedIn <span style="color: #7d7896; font-style: italic;">Optional</span></div>
+              <div style="background: rgba(7,6,13,0.6); border: 1px solid rgba(244,241,251,0.14); padding: 11px 14px; font-size: 13px; color: #7d7896;">username or URL</div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 13px; background: rgba(7,6,13,0.6); border: 1px dashed rgba(244,241,251,0.2); padding: 13px 14px;">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#ff8fd6" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v5h5"></path><path d="M6 3h8l5 5v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"></path></svg>
+            <span style="font-size: 12px; color: #7d7896; flex-grow: 1;">Resume &#8212; PDF, max 5MB &#183; shared with sponsors</span>
+            <span class="pxbtn" style="font-family: 'Space Mono', monospace; font-weight: 700; font-size: 10px; letter-spacing: 0.025em; background: #07060d; color: #f4f1fb; padding: 9px 16px; cursor: pointer; box-shadow: 0 -4px 0 0 #1a1530, 0 4px 0 0 #1a1530, -4px 0 0 0 #1a1530, 4px 0 0 0 #1a1530;">CHOOSE FILE</span>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ===== STEP 5 — AGREEMENTS (amber) ===== -->
+    <sc-if value="{{ isS5 }}" hint-placeholder-val="{{ true }}">
+      <div class="stepin" style="position: relative; flex-grow: 1; padding: 30px 28px; background: linear-gradient(135deg, rgba(244,241,251,0.06) 0 12px, transparent 12px), linear-gradient(315deg, rgba(255,217,160,0.3) 0 10px, transparent 10px), rgba(18,15,31,0.92); box-shadow: 0 -4px 0 0 #ffd9a0, 0 4px 0 0 #ffd9a0, -4px 0 0 0 #ffd9a0, 4px 0 0 0 #ffd9a0, inset 0 4px 0 0 rgba(244,241,251,0.06), inset 0 -4px 0 0 rgba(7,6,13,0.45); display: flex; gap: 34px;">
+        <div style="width: 196px; flex-shrink: 0;">
+          <div style="font-family: 'Press Start 2P', monospace; font-size: 9px; color: #ffd9a0; margin-bottom: 11px;">05</div>
+          <div style="font-size: 13px; font-weight: 700; letter-spacing: 0.025em; margin-bottom: 10px;">AGREEMENTS</div>
+          <div style="font-size: 12px; line-height: 1.65; color: #9a94b0;">Exact MLH wording &#8212; don&#39;t paraphrase it. First two required, third opt-in.</div>
+        </div>
+        <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 13px;">
+          <div style="display: flex; gap: 13px; background: rgba(7,6,13,0.45); padding: 14px 16px;">
+            <span style="font-family: 'Press Start 2P', monospace; font-size: 11px; color: #21e6c1; line-height: 1.3;">[x]</span>
+            <div style="font-size: 12px; line-height: 1.7;">I have read and agree to the <a href="#">MLH Code of Conduct</a>. <span style="color: #ff2e97;">*</span></div>
+          </div>
+          <div style="display: flex; gap: 13px; background: rgba(7,6,13,0.45); padding: 14px 16px;">
+            <span style="font-family: 'Press Start 2P', monospace; font-size: 11px; color: #21e6c1; line-height: 1.3;">[x]</span>
+            <div style="font-size: 12px; line-height: 1.7;">I authorize you to share my application/registration information with Major League Hacking for event administration, ranking, and MLH administration in-line with the <a href="#">MLH Privacy Policy</a>. I further agree to the terms of both the <a href="#">MLH Contest Terms and Conditions</a> and the <a href="#">MLH Privacy Policy</a>. <span style="color: #ff2e97;">*</span></div>
+          </div>
+          <div style="display: flex; gap: 13px; background: rgba(7,6,13,0.45); padding: 14px 16px;">
+            <span style="font-family: 'Press Start 2P', monospace; font-size: 11px; color: #7d7896; line-height: 1.3;">[ ]</span>
+            <div style="font-size: 12px; line-height: 1.7; color: #c7c2dc;">I authorize MLH to send me occasional emails about relevant events, career opportunities, and community announcements. <span style="color: #7d7896; font-style: italic;">Optional</span></div>
+          </div>
+          <div style="border-left: 3px solid #ffd9a0; padding: 11px 14px; background: rgba(255,217,160,0.06); font-size: 11px; line-height: 1.7; color: #9a94b0;">We have applied to be an MLH Hack Day. These checkboxes only apply if our application is accepted &#8212; your information will not be shared if we do not become an MLH event.</div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ===== STEP 6 — SUBMITTED ===== -->
+    <sc-if value="{{ isDone }}" hint-placeholder-val="{{ true }}">
+      <div class="stepin" style="display: flex; align-items: center; justify-content: center; gap: 52px; flex-grow: 1;">
+        <div style="width: 600px; position: relative; background: color-mix(in srgb, #07060d 92%, #a22155); box-shadow: 0 -4px 0 0 #1a1530, 0 4px 0 0 #1a1530, -4px 0 0 0 #1a1530, 4px 0 0 0 #1a1530, 0 0 42px 0 rgba(239,99,89,0.1);">
+          <div style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: color-mix(in srgb, #120f1f 88%, #a22155); box-shadow: 0 4px 0 0 #1a1530;">
+            <span style="width: 10px; height: 10px; background: #ff5f56;"></span>
+            <span style="width: 10px; height: 10px; background: #ffbd2e;"></span>
+            <span style="width: 10px; height: 10px; background: #27c93f;"></span>
+            <span style="margin-left: 6px; font-family: 'Press Start 2P', monospace; font-size: 8px; color: #c7c2dc;">APPLICATION.LOG</span>
+          </div>
+          <div style="position: relative; padding: 32px 30px 28px; text-align: center;">
+            <div style="position: absolute; inset: 0; pointer-events: none; opacity: 0.05; background: repeating-linear-gradient(to bottom, #f4f1fb 0 1px, transparent 1px 3px);"></div>
+            <div style="font-family: 'Press Start 2P', monospace; font-size: 9px; letter-spacing: 0.1em; color: #21e6c1; margin-bottom: 16px;">// SUBMITTED</div>
+            <h2 style="font-family: 'Press Start 2P', monospace; font-size: 18px; line-height: 1.7; margin: 0 0 16px;">YOU&#39;RE IN<br>THE PILE</h2>
+            <p style="font-size: 13px; line-height: 1.8; color: #9a94b0; margin: 0 0 22px;">We&#39;ll email <span style="color: #21e6c1;">mariana@usf.edu</span> when decisions go out.</p>
+            <div style="text-align: left; font-size: 12px; line-height: 2.05; color: #7d7896; max-width: 320px; margin: 0 auto 22px;">
+              <div><span style="color: #21e6c1;">$</span> application --submit <span style="color: #27c93f;">OK</span></div>
+              <div><span style="color: #21e6c1;">$</span> confirmation --email <span style="color: #27c93f;">SENT</span></div>
+              <div><span style="color: #21e6c1;">$</span> review --status <span style="color: #ffbd2e;">PENDING</span></div>
+            </div>
+            <button class="pxbtn" onClick="{{ restart }}" style="font-family: 'Space Mono', monospace; font-weight: 700; letter-spacing: 0.025em; background: #07060d; color: #f4f1fb; padding: 11px 22px; font-size: 11px; border: 0; cursor: pointer; box-shadow: 0 -4px 0 0 #1a1530, 0 4px 0 0 #1a1530, -4px 0 0 0 #1a1530, 4px 0 0 0 #1a1530;">REPLAY FLOW</button>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
+          <img class="bob" src="mascot.png" alt="" style="width: 210px; height: auto; image-rendering: pixelated; filter: drop-shadow(0 0 34px rgba(33,230,193,0.3));">
+          <img src="shpe-usf.png" alt="SHPE USF" style="width: 170px; height: auto; opacity: 0.82;">
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- ===== FOOTER NAV ===== -->
+    <sc-if value="{{ showRail }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 22px;">
+        <button class="pxbtn" onClick="{{ back }}" style="font-family: 'Space Mono', monospace; font-weight: 700; letter-spacing: 0.025em; background: #07060d; color: #f4f1fb; padding: 11px 22px; font-size: 11px; border: 0; cursor: pointer; box-shadow: 0 -4px 0 0 #1a1530, 0 4px 0 0 #1a1530, -4px 0 0 0 #1a1530, 4px 0 0 0 #1a1530;">&#8592; BACK</button>
+        <span style="font-size: 11px; color: #63607a;">Answers save as you go &#183; you can finish later</span>
+        <button class="pxbtn" onClick="{{ next }}" style="font-family: 'Space Mono', monospace; font-weight: 700; letter-spacing: 0.025em; background: #ff2e97; color: #07060d; padding: 11px 22px; font-size: 11px; border: 0; cursor: pointer; box-shadow: 0 -4px 0 0 #ff2e97, 0 4px 0 0 #ff2e97, -4px 0 0 0 #ff2e97, 4px 0 0 0 #ff2e97, 0 0 16px 0 rgba(255,46,151,0.35);">{{ nextLabel }}</button>
+      </div>
+    </sc-if>
+
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":1280,"height":880}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const step = this.state.step ?? 0;
+    const go = (n) => () => this.setState({ step: n });
+
+    const defs = [
+      { n: '01', label: 'BASICS', c: '#21e6c1', head: 'THE BASICS' },
+      { n: '02', label: 'ABOUT YOU', c: '#c58bff', head: 'ABOUT YOU' },
+      { n: '03', label: 'SCHOOL', c: '#ff8fd6', head: 'YOUR SCHOOL' },
+      { n: '04', label: 'EXPERIENCE', c: '#ff2e97', head: 'YOUR EXPERIENCE' },
+      { n: '05', label: 'AGREEMENTS', c: '#ffd9a0', head: 'THE FINE PRINT' }
+    ];
+
+    const steps = defs.map((d, i) => {
+      const idx = i + 1;
+      const active = idx === step;
+      const done = idx < step;
+      const rowBg = active ? 'rgba(244,241,251,0.05)' : 'transparent';
+      const dotC = active ? d.c : (done ? '#21e6c1' : 'transparent');
+      const numC = active ? d.c : (done ? '#7d7896' : '#63607a');
+      const labC = active ? d.c : (done ? '#9a94b0' : '#63607a');
+      return {
+        n: d.n,
+        label: d.label,
+        rowStyle: 'display: flex; align-items: center; gap: 9px; padding: 9px 10px; background: ' + rowBg + ';',
+        dotStyle: 'width: 6px; height: 6px; flex-shrink: 0; background: ' + dotC + ';',
+        numStyle: "font-family: 'Press Start 2P', monospace; font-size: 8px; color: " + numC + ';',
+        labelStyle: 'font-size: 11px; font-weight: 700; letter-spacing: 0.05em; color: ' + labC + ';'
+      };
+    });
+
+    const blocks = defs.map((d, i) => {
+      const idx = i + 1;
+      const on = idx <= step;
+      return {
+        style: 'width: 62px; height: 10px; background: ' + (on ? d.c : '#1a1530') +
+          (on ? '; box-shadow: 0 0 10px ' + d.c + '55;' : ';')
+      };
+    });
+
+    const current = defs[step - 1];
+
+    // Mirrors AltitudeHUD in the HackJam site: 402 km down to the surface,
+    // through the same five named zones. Applying = descending to land.
+    const zones = ['LOW ORBIT', 'NEBULA FIELD', 'UPPER ATMOSPHERE', 'SUNSET BAND', 'SURFACE'];
+    const alts = ['402', '318', '210', '096', '012'];
+    const earthPx = [46, 60, 76, 96, 118][step - 1] || 46;
+    const accent = current ? current.c : '#63607a';
+
+    return {
+      zone: zones[step - 1] || '',
+      altKm: alts[step - 1] || '000',
+      altStyle: "font-family: 'Press Start 2P', monospace; font-size: 15px; color: " + accent + '; text-shadow: 0 0 14px ' + accent + '55;',
+      earthStyle: 'width: ' + earthPx + 'px; height: auto; image-rendering: pixelated; filter: drop-shadow(0 0 18px ' + accent + '40);',
+      steps: steps,
+      blocks: blocks,
+      headline: current ? current.head : '',
+      stepLabel: 'STEP ' + step + ' / 5',
+      minsLeft: 5 - step + 1,
+      nextLabel: step === 5 ? 'SUBMIT APPLICATION' : 'NEXT →',
+      showRail: step >= 1 && step <= 5,
+      isSignIn: step === 0,
+      isS1: step === 1,
+      isS2: step === 2,
+      isS3: step === 3,
+      isS4: step === 4,
+      isS5: step === 5,
+      isDone: step === 6,
+      start: go(1),
+      next: go(step + 1),
+      back: go(step - 1),
+      restart: go(0)
+    };
+  }
+}
+</script>
+</body>
+</html>
