@@ -14,9 +14,9 @@ import { STARFIELD, Dots } from "../_shared";
  * which meant ~491KB of step components, fields and the school picker had to
  * download and hydrate before one button would respond.
  *
- * It's also closer to where this is heading: when PLAT-12 lands, "Sign in with
- * Discord" becomes a real OAuth redirect — a navigation, not a state change.
- * Swapping this Link's href for the auth route is then the whole change.
+ * The button links to /auth/signin, a GET route that asks Supabase for the
+ * Discord OAuth URL server-side and redirects to it — so sign-in is a plain
+ * navigation with no client JavaScript involved at all.
  */
 export default function ApplyLandingPage() {
   return (
@@ -61,7 +61,7 @@ export default function ApplyLandingPage() {
         </p>
 
         <Link
-          href="/apply/form"
+          href="/auth/signin"
           className="pixel-btn-solid inline-flex items-center justify-center gap-2.5 px-7 py-[15px] font-body text-xs font-bold tracking-wide text-surface-bg"
         >
           <DiscordIcon size={18} />
