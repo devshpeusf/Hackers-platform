@@ -152,10 +152,14 @@ export const applicationSteps: ApplicationStep[] = [
  * Verbatim MLH policy text from github.com/MLH/mlh-policies. Do not reword:
  * MLH requires these exact sentences on an event registration.
  */
+/**
+ * MLH's exact wording. Never pre-tick these: consent has to be an action the
+ * applicant takes, and a pre-ticked box is not a record of agreement.
+ */
 export const applicationConsent = [
-  { id: "coc", required: true, text: "I have read and agree to the MLH Code of Conduct." },
-  { id: "share", required: true, text: "I authorize you to share my application/registration information with Major League Hacking for event administration, ranking, and MLH administration in-line with the MLH Privacy Policy. I further agree to the terms of both the MLH Contest Terms and Conditions and the MLH Privacy Policy." },
-  { id: "emails", required: false, text: "I authorize MLH to send me occasional emails about relevant events, career opportunities, and community announcements." },
+  { id: "coc", field: "agreedCodeOfConduct", required: true, text: "I have read and agree to the MLH Code of Conduct." },
+  { id: "share", field: "agreedDataSharing", required: true, text: "I authorize you to share my application/registration information with Major League Hacking for event administration, ranking, and MLH administration in-line with the MLH Privacy Policy. I further agree to the terms of both the MLH Contest Terms and Conditions and the MLH Privacy Policy." },
+  { id: "emails", field: "agreedMarketing", required: false, text: "I authorize MLH to send me occasional emails about relevant events, career opportunities, and community announcements." },
 ];
 
 /** Shown next to the consent boxes while the MLH application is pending. */
@@ -207,7 +211,8 @@ export const applicationCopy = {
   intro:
     "Five short steps, about four minutes. Sign in with Discord \u2014 it's how we reach you about your application and how you get into the server.",
   finePrint: "Applications close [DATE] \u00b7 we only read your username and ID.",
-  footerHint: "Answers save as you go \u00b7 you can finish later",
+  /** Was "Answers save as you go" — we don't persist drafts, so it was a lie. */
+  footerHint: "Nothing is submitted until the last step",
   /** Placeholder questions \u2014 real copy is still a content decision. */
   questions: [
     "Why do you want to attend HackJam '26?",

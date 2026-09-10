@@ -1,13 +1,19 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useReducer, useState, useTransition, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import clsx from "@/lib/clsx";
 import { STARFIELD } from "../../_shared";
 import type { ApplicantIdentity } from "@/lib/supabase/user";
 import DiscordIcon from "@/components/ui/DiscordIcon";
-import SchoolPicker, { type SchoolSelection } from "@/components/ui/SchoolPicker";
+import SchoolPicker from "@/components/ui/SchoolPicker";
+import {
+  validateStep,
+  STEP_FIELDS as STEP_FIELDS_BY_STEP,
+  type ApplicationInput,
+} from "@/lib/application-schema";
+import { submitApplication, type SubmitResult } from "./actions";
 import {
   applicationSteps,
   applicationConsent,
@@ -25,36 +31,87 @@ import {
  *
  * Built from the PLAT-35 design canvas.
  *
- * COSMETIC ONLY. There is no backend: sign-in doesn't authenticate, nothing
- * validates, and submitting just advances local state. Every input is
- * uncontrolled so typing feels real while you click through — none of it is
- * read anywhere. Real submission is PLAT-22; Discord OAuth is PLAT-12.
+ * Answers live in one reducer rather than in the inputs: steps unmount as you
+ * navigate, so uncontrolled fields would lose everything the moment you hit
+ * NEXT. It's also what lets NEXT gate on per-step validation.
+ *
+ * Nothing is persisted until SUBMIT — the footer copy says so. Draft saving is
+ * its own ticket.
  */
 
 const LAST_STEP = applicationSteps.length; // 5
 const DONE = LAST_STEP + 1; // 6
 
-export default function ApplicationWizard({ identity }: { identity: ApplicantIdentity }) {
-  // Starts at 1: step 0 (sign-in) is now the server-rendered /apply page, so
-  // that screen needs no hydration to be clickable.
-  const [step, setStep] = useState(1);
-  /**
-   * Held here rather than inside the step so it survives Back/Next, and so
-   * whoever wires submission (PLAT-22) finds the source flag already tracked
-   * rather than having to add it.
-   */
-  const [school, setSchool] = useState<SchoolSelection | null>(null);
+/** Everything the form collects. Mirrors the Zod schema and the Prisma columns. */
+export type Answers = Partial<ApplicationInput>;
 
-  if (step === DONE) return <Submitted email={identity.email} />;
+/**
+ * The email is seeded from Discord so the applicant doesn't retype it, and
+ * agreedMarketing starts false because MLH marketing is opt-in — an unticked
+ * box has to mean "no", not "unanswered".
+ */
+function initialAnswers(identity: ApplicantIdentity): Answers {
+  return { email: identity.email ?? "", agreedMarketing: false };
+}
+
+function answersReducer(state: Answers, patch: Answers): Answers {
+  return { ...state, ...patch };
+}
+
+export default function ApplicationWizard({ identity }: { identity: ApplicantIdentity }) {
+  // Starts at 1: step 0 (sign-in) is the server-rendered /apply page, so that
+  // screen needs no hydration to be clickable.
+  const [step, setStep] = useState(1);
+  const [answers, patch] = useReducer(answersReducer, identity, initialAnswers);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [result, setResult] = useState<SubmitResult | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function goNext() {
+    const stepErrors = validateStep(step, answers);
+    if (Object.keys(stepErrors).length) {
+      setErrors(stepErrors);
+      return;
+    }
+    setErrors({});
+    if (step < LAST_STEP) return setStep((s) => s + 1);
+
+    startTransition(async () => {
+      const res = await submitApplication(answers as ApplicationInput);
+      setResult(res);
+      // A server-side validation failure means something got past the client
+      // gate — send them back to the step that owns the first bad field.
+      if (!res.ok && res.error === "validation") {
+        setErrors(res.fields);
+        const first = Object.keys(res.fields)[0];
+        const owning = ([1, 2, 3, 4, 5] as const).find((n) =>
+          (STEP_FIELDS_BY_STEP[n] as readonly string[]).includes(first),
+        );
+        if (owning) setStep(owning);
+      }
+    });
+  }
+
+  if (result?.ok) return <Submitted email={answers.email ?? identity.email} />;
+  if (result && !result.ok && result.error === "duplicate") {
+    return <AlreadyApplied username={identity.username} />;
+  }
+  if (result && !result.ok && result.error === "closed") return <ApplicationsClosed />;
 
   return (
     <Wizard
       step={step}
       identity={identity}
-      school={school}
-      onSchoolChange={setSchool}
-      onBack={() => setStep((s) => Math.max(1, s - 1))}
-      onNext={() => setStep((s) => s + 1)}
+      answers={answers}
+      errors={errors}
+      pending={pending}
+      failed={result && !result.ok && (result.error === "unknown" || result.error === "unauthenticated") ? result.error : null}
+      onChange={patch}
+      onBack={() => {
+        setErrors({});
+        setStep((s) => Math.max(1, s - 1));
+      }}
+      onNext={goNext}
     />
   );
 }
@@ -65,6 +122,42 @@ export default function ApplicationWizard({ identity }: { identity: ApplicantIde
 
 const FIELD =
   "w-full bg-surface-bg/60 border border-[rgba(244,241,251,0.14)] px-[14px] py-3 text-[13px] text-text-primary placeholder:text-text-dim outline-none focus:border-accent-teal/55 focus:shadow-[0_0_0_3px_rgba(33,230,193,0.1)] transition-colors";
+
+/**
+ * Option lists. Values are stored verbatim — no codes — so a row in the
+ * database reads the same as what the applicant picked, and MLH reporting
+ * doesn't need a lookup table.
+ */
+const COUNTRIES = ["United States", "Canada", "Mexico", "India", "Other"];
+const LEVELS_OF_STUDY = [
+  "Undergraduate University (3+ year)",
+  "Undergraduate University (2 year)",
+  "Graduate University (Masters, Doctoral, etc)",
+  "High School",
+  "Code School / Bootcamp",
+  "Other",
+];
+const GENDERS = ["Woman", "Man", "Non-binary", "Prefer to self-describe"];
+const RACES = [
+  "Asian",
+  "Black or African American",
+  "Hispanic / Latino / Spanish Origin",
+  "Middle Eastern",
+  "Native American or Alaskan Native",
+  "Native Hawaiian or Other Pacific Islander",
+  "White",
+  "Other",
+];
+const SHIRT_SIZES = ["XS", "S", "M", "L", "XL", "2XL", "3XL"];
+
+function FieldError({ msg }: { msg?: string }) {
+  if (!msg) return null;
+  return (
+    <div role="alert" className="mt-1.5 text-[11px] text-terminal-red">
+      {msg}
+    </div>
+  );
+}
 
 function Label({ children, optional }: { children: ReactNode; optional?: boolean }) {
   return (
@@ -82,15 +175,21 @@ function Label({ children, optional }: { children: ReactNode; optional?: boolean
 function Wizard({
   step,
   identity,
-  school,
-  onSchoolChange,
+  answers,
+  errors,
+  pending,
+  failed,
+  onChange,
   onBack,
   onNext,
 }: {
   step: number;
   identity: ApplicantIdentity;
-  school: SchoolSelection | null;
-  onSchoolChange: (s: SchoolSelection) => void;
+  answers: Answers;
+  errors: Record<string, string>;
+  pending: boolean;
+  failed: "unknown" | "unauthenticated" | null;
+  onChange: (patch: Answers) => void;
   onBack: () => void;
   onNext: () => void;
 }) {
@@ -234,9 +333,17 @@ function Wizard({
           </div>
 
           <div className="flex flex-1 flex-col gap-[19px]">
-            <StepFields step={step} identity={identity} school={school} onSchoolChange={onSchoolChange} />
+            <StepFields step={step} identity={identity} answers={answers} errors={errors} onChange={onChange} />
           </div>
         </div>
+
+        {failed && (
+          <div role="alert" className="mt-4 border-l-[3px] border-terminal-red bg-terminal-red/6 px-3.5 py-2.5 text-[11px] leading-[1.7] text-text-muted">
+            {failed === "unauthenticated"
+              ? "Your session expired. Sign in again and your answers on this screen will still be here."
+              : "Something went wrong saving your application. Nothing was lost — try submitting again."}
+          </div>
+        )}
 
         {/* footer nav */}
         <div className="mt-5 flex items-center justify-between gap-4">
@@ -262,9 +369,13 @@ function Wizard({
           <button
             type="button"
             onClick={onNext}
-            className="pixel-btn-solid px-[22px] py-[11px] font-body text-[11px] font-bold tracking-wide text-surface-bg"
+            disabled={pending}
+            className={clsx(
+              "pixel-btn-solid px-[22px] py-[11px] font-body text-[11px] font-bold tracking-wide text-surface-bg",
+              pending && "cursor-not-allowed opacity-70",
+            )}
           >
-            {isLast ? "SUBMIT APPLICATION" : "NEXT →"}
+            {pending ? "SUBMITTING…" : isLast ? "SUBMIT APPLICATION" : "NEXT →"}
           </button>
         </div>
       </main>
@@ -279,36 +390,43 @@ function Wizard({
 function StepFields({
   step,
   identity,
-  school,
-  onSchoolChange,
+  answers,
+  errors,
+  onChange,
 }: {
   step: number;
   identity: ApplicantIdentity;
-  school: SchoolSelection | null;
-  onSchoolChange: (s: SchoolSelection) => void;
+  answers: Answers;
+  errors: Record<string, string>;
+  onChange: (patch: Answers) => void;
 }) {
+  /** Wires one field to the reducer and shows its error. */
+  const f = (name: keyof ApplicationInput) => ({
+    value: (answers[name] as string | undefined) ?? "",
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+      onChange({ [name]: e.target.value } as Answers),
+    "aria-invalid": errors[name] ? true : undefined,
+    className: clsx(FIELD, errors[name] && "border-terminal-red!"),
+  });
   if (step === 1) {
     return (
       <>
         <div className="flex flex-col gap-[18px] sm:flex-row">
           <div className="flex-1">
             <Label>First Name</Label>
-            <input className={FIELD} name="firstName" placeholder="As it appears on your student ID" />
+            <input {...f("firstName")} placeholder="As it appears on your student ID" />
+            <FieldError msg={errors.firstName} />
           </div>
           <div className="flex-1">
             <Label>Last Name</Label>
-            <input className={FIELD} name="lastName" placeholder="" />
+            <input {...f("lastName")} />
+            <FieldError msg={errors.lastName} />
           </div>
         </div>
         <div>
           <Label>Email</Label>
-          <input
-              className={FIELD}
-              type="email"
-              name="email"
-              defaultValue={identity.email ?? ""}
-              placeholder="you@usf.edu"
-            />
+          <input {...f("email")} type="email" placeholder="you@usf.edu" />
+          <FieldError msg={errors.email} />
             <div className="mt-2 text-[11px] text-text-faintest">
               {identity.email
                 ? "From your Discord account — change it if you'd rather we used another."
@@ -318,7 +436,8 @@ function StepFields({
         <div className="flex flex-col gap-[18px] sm:flex-row">
           <div className="flex-1">
             <Label>Phone</Label>
-            <input className={FIELD} placeholder="(___) ___-____" />
+            <input {...f("phone")} placeholder="(___) ___-____" />
+              <FieldError msg={errors.phone} />
           </div>
           <div className="flex-1">
             <Label>
@@ -350,41 +469,47 @@ function StepFields({
         <div className="flex flex-col gap-[18px] sm:flex-row">
           <div className="flex-1">
             <Label>Date of Birth</Label>
-            <input className={FIELD} type="date" defaultValue="2004-03-18" />
+            <input {...f("dateOfBirth")} type="date" />
+            <FieldError msg={errors.dateOfBirth} />
           </div>
           <div className="flex-1">
             <Label>Country of Residence</Label>
-            <select className={FIELD} defaultValue="us">
-              <option value="us">United States</option>
-              <option value="ca">Canada</option>
-              <option value="mx">Mexico</option>
+            <select {...f("country")}>
+              <option value="">Select…</option>
+              {COUNTRIES.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
             </select>
+            <FieldError msg={errors.country} />
           </div>
         </div>
         <div>
           <Label>Level of Study</Label>
-          <select className={FIELD} defaultValue="ug3">
-            <option value="ug3">Undergraduate University (3+ year)</option>
-            <option value="ug2">Undergraduate University (2 year)</option>
-            <option value="grad">Graduate University</option>
+          <select {...f("levelOfStudy")}>
+            <option value="">Select…</option>
+            {LEVELS_OF_STUDY.map((l) => (
+              <option key={l} value={l}>{l}</option>
+            ))}
           </select>
+          <FieldError msg={errors.levelOfStudy} />
         </div>
         <div className="flex flex-col gap-[18px] sm:flex-row">
           <div className="flex-1">
             <Label optional>Gender</Label>
-            <select className={FIELD} defaultValue="na">
-              <option value="na">Prefer not to answer</option>
-              <option value="woman">Woman</option>
-              <option value="man">Man</option>
-              <option value="nb">Non-binary</option>
+            <select {...f("gender")}>
+              <option value="">Prefer not to answer</option>
+              {GENDERS.map((g) => (
+                <option key={g} value={g}>{g}</option>
+              ))}
             </select>
           </div>
           <div className="flex-1">
             <Label optional>Race / Ethnicity</Label>
-            <select className={FIELD} defaultValue="na">
-              <option value="na">Prefer not to answer</option>
-              <option value="hisp">Hispanic / Latino / Spanish Origin</option>
-              <option value="other">Other</option>
+            <select {...f("raceEthnicity")}>
+              <option value="">Prefer not to answer</option>
+              {RACES.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -406,11 +531,12 @@ function StepFields({
               silent abandon. The source flag below is what keeps the data
               clean despite that. */}
           <SchoolPicker
-            defaultValue={school?.name ?? ""}
+            defaultValue={answers.school ?? ""}
             allowManualEntry
-            onChange={(name, source) => onSchoolChange({ name, source })}
+            onChange={(name, source) => onChange({ school: name, schoolSource: source })}
           />
-          {school?.source === "manual" && (
+          <FieldError msg={errors.school} />
+          {answers.schoolSource === "manual" && (
             <div className="mt-2 flex gap-2 text-[11px] leading-[1.7] text-accent-amber">
               <span aria-hidden>&#9888;</span>
               <span>
@@ -423,18 +549,23 @@ function StepFields({
         <div className="flex flex-col gap-[18px] sm:flex-row">
           <div className="flex-1">
             <Label>Major</Label>
-            <input className={FIELD} defaultValue="Computer Engineering" />
+            <input {...f("major")} placeholder="e.g. Computer Engineering" />
+            <FieldError msg={errors.major} />
           </div>
           <div className="flex-1">
             <Label>Graduation</Label>
-            <input className={FIELD} type="month" defaultValue="2027-05" />
+            <input {...f("graduation")} type="month" />
+            <FieldError msg={errors.graduation} />
           </div>
           <div className="sm:w-[132px]">
             <Label>Shirt Size</Label>
-            <select className={FIELD} defaultValue="M">
-              <option>XS</option><option>S</option><option>M</option>
-              <option>L</option><option>XL</option><option>2XL</option>
+            <select {...f("shirtSize")}>
+              <option value="">Select…</option>
+              {SHIRT_SIZES.map((z) => (
+                <option key={z} value={z}>{z}</option>
+              ))}
             </select>
+            <FieldError msg={errors.shirtSize} />
           </div>
         </div>
       </>
@@ -444,22 +575,28 @@ function StepFields({
   if (step === 4) {
     return (
       <>
-        {applicationCopy.questions.map((q) => (
-          <div key={q}>
+        {(["whyAttend", "whatBuild"] as const).map((key, i) => (
+          <div key={key}>
             <Label>
-              {q} <span className="text-accent-amber">[PLACEHOLDER]</span>
+              {applicationCopy.questions[i]}{" "}
+              <span className="text-accent-amber">[PLACEHOLDER]</span>
             </Label>
-            <textarea className={clsx(FIELD, "h-[74px] resize-none")} placeholder="A few sentences is plenty…" />
+            <textarea
+              {...f(key)}
+              className={clsx(FIELD, "h-[74px] resize-none", errors[key] && "border-terminal-red!")}
+              placeholder="A few sentences is plenty…"
+            />
+            <FieldError msg={errors[key]} />
           </div>
         ))}
         <div className="flex flex-col gap-[18px] sm:flex-row">
           <div className="flex-1">
             <Label optional>GitHub</Label>
-            <input className={FIELD} placeholder="username or URL" />
+            <input {...f("gitHub")} placeholder="username or URL" />
           </div>
           <div className="flex-1">
             <Label optional>LinkedIn</Label>
-            <input className={FIELD} placeholder="username or URL" />
+            <input {...f("linkedIn")} placeholder="username or URL" />
           </div>
         </div>
         <div className="flex items-center gap-3.5 border border-dashed border-text-primary/20 bg-surface-bg/60 px-3.5 py-3.5">
@@ -481,12 +618,20 @@ function StepFields({
   // step 5 — agreements
   return (
     <>
-      {applicationConsent.map((c) => (
+        {applicationConsent.map((c) => {
+          const key = c.field as "agreedCodeOfConduct" | "agreedDataSharing" | "agreedMarketing";
+          return (
         <label
           key={c.id}
           className="flex cursor-pointer gap-3.5 bg-surface-bg/45 px-4 py-3.5"
         >
-          <input type="checkbox" defaultChecked={c.required} className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-accent-teal)]" />
+            {/* Never defaultChecked: a pre-ticked box is not a record of consent. */}
+            <input
+              type="checkbox"
+              checked={answers[key] === true}
+              onChange={(e) => onChange({ [key]: e.target.checked } as Answers)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-accent-teal)]"
+            />
           <span className="text-xs leading-[1.7] text-text-secondary">
             {c.text}{" "}
             {c.required ? (
@@ -496,7 +641,13 @@ function StepFields({
             )}
           </span>
         </label>
-      ))}
+          );
+        })}
+        {(errors.agreedCodeOfConduct || errors.agreedDataSharing) && (
+          <div className="text-[11px] text-terminal-red">
+            Accept every required agreement to continue.
+          </div>
+        )}
       <div className="border-l-[3px] border-accent-amber bg-accent-amber/6 px-3.5 py-2.5 text-[11px] leading-[1.7] text-text-muted">
         {mlhPendingNotice}
       </div>
@@ -507,6 +658,82 @@ function StepFields({
 /* ------------------------------------------------------------------ */
 /* Step 6 — submitted                                                  */
 /* ------------------------------------------------------------------ */
+
+/** Shared chrome for the terminal-window result screens. */
+function ResultScreen({
+  filename,
+  tag,
+  tagColor,
+  heading,
+  children,
+}: {
+  filename: string;
+  tag: string;
+  tagColor: string;
+  heading: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className={clsx("flex min-h-screen items-center justify-center px-6 py-10", STARFIELD)}>
+      <div className="terminal-window w-full max-w-[620px]">
+        <div className="terminal-bar flex items-center gap-2.5 px-3.5 py-2.5">
+          <span className="h-2.5 w-2.5 bg-terminal-red" />
+          <span className="h-2.5 w-2.5 bg-terminal-yellow" />
+          <span className="h-2.5 w-2.5 bg-terminal-green" />
+          <span className="ml-1.5 font-pixel text-[8px] text-text-secondary">{filename}</span>
+        </div>
+        <div className="relative px-7 pb-7 pt-8 text-center">
+          <div className="pointer-events-none absolute inset-0 opacity-5 [background:repeating-linear-gradient(to_bottom,#f4f1fb_0_1px,transparent_1px_3px)]" />
+          <div className="mb-4 font-pixel text-[9px] tracking-widest" style={{ color: tagColor }}>
+            {tag}
+          </div>
+          <h2 className="mb-4 font-pixel text-lg leading-[1.7]">{heading}</h2>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** PLAT-25 — the unique constraint on (person, event) got there first. */
+function AlreadyApplied({ username }: { username: string }) {
+  return (
+    <ResultScreen
+      filename="APPLICATION.LOG"
+      tag="// ALREADY APPLIED"
+      tagColor="var(--color-accent-amber)"
+      heading="ONE PER HACKER"
+    >
+      <p className="mb-6 text-[13px] leading-[1.8] text-text-muted">
+        You&apos;ve already applied as <span className="text-accent-purple-light">{username}</span>.
+        We only take one application per Discord account.
+      </p>
+      <Link
+        href="/dashboard"
+        className="pixel-btn-solid inline-flex px-[22px] py-[11px] font-body text-[11px] font-bold tracking-wide text-surface-bg"
+      >
+        VIEW MY APPLICATION &rarr;
+      </Link>
+    </ResultScreen>
+  );
+}
+
+/** No event is currently accepting applications. */
+function ApplicationsClosed() {
+  return (
+    <ResultScreen
+      filename="APPLICATION.LOG"
+      tag="// APPLICATIONS CLOSED"
+      tagColor="var(--color-text-dim)"
+      heading={<>THAT&apos;S A WRAP</>}
+    >
+      <p className="text-[13px] leading-[1.8] text-text-muted">
+        Applications aren&apos;t open right now. Follow us on Discord and we&apos;ll announce the
+        next one there first.
+      </p>
+    </ResultScreen>
+  );
+}
 
 function Submitted({ email }: { email: string | null }) {
   return (

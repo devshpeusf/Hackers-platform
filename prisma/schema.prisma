@@ -23,10 +23,17 @@ model Person {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
 
+  /// Discord account id — the identity an application is keyed on. Email is
+  /// self-reported and editable, so it can't be the key: someone signing in
+  /// again with a different email would become a second Person.
+  discordId String @unique
+
   firstName String
   lastName  String
-  email     String @unique
-  phoneNum  String @unique
+  email     String  @unique
+  /// Required — MLH's baseline collection includes phone number. Deliberately
+  /// NOT unique though: two applicants can legitimately share a number.
+  phoneNum  String
 
   // One person can have one resume
   resume Resume?
@@ -70,12 +77,37 @@ model Application {
   event   Event  @relation(fields: [eventId], references: [id])
 
   status       ApplicationStatus @default(SUBMITTED)
+
   school       String
   schoolSource SchoolSource
+  major        String
+  graduation   String
   levelOfStudy String
+  shirtSize    String
+
   country      String
-  age          Int
-  diet         String
+  /// Stored instead of an age: an age column is wrong within a year, and MLH's
+  /// 80%-student rule is judged against the event date.
+  dateOfBirth  DateTime
+  /// Demographics MLH reports on. Optional — nobody is required to answer.
+  gender        String?
+  raceEthnicity String?
+
+  /// The two short answers.
+  whyAttend String @db.Text
+  whatBuild String @db.Text
+
+  /// Meal preference is collected post-acceptance on the dashboard, not on the
+  /// application, so this is nullable.
+  diet         String?
+
+  /// MLH consent. The first two are required by MLH and enforced in the Zod
+  /// schema; marketing is opt-in. agreementsAt matters because MLH versions
+  /// their wording — knowing WHEN someone agreed is part of the record.
+  agreedCodeOfConduct Boolean
+  agreedDataSharing   Boolean
+  agreedMarketing     Boolean  @default(false)
+  agreementsAt        DateTime
 
   gitHub    String?
   linkedIn  String?
