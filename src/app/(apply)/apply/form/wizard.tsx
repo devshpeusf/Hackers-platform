@@ -150,6 +150,66 @@ const RACES = [
 ];
 const SHIRT_SIZES = ["XS", "S", "M", "L", "XL", "2XL", "3XL"];
 
+const MONTHS = [
+  ["01", "January"], ["02", "February"], ["03", "March"], ["04", "April"],
+  ["05", "May"], ["06", "June"], ["07", "July"], ["08", "August"],
+  ["09", "September"], ["10", "October"], ["11", "November"], ["12", "December"],
+] as const;
+
+/**
+ * Graduation month and year, as two selects rather than <input type="month">.
+ *
+ * The month input renders as a fiddly MM/YYYY spinner that happily returns a
+ * half-filled value — that's how a bare "2008" reached the database. Two
+ * selects can't be partially valid, need no format hint, and behave the same
+ * in every browser.
+ *
+ * Still stores the "YYYY-MM" string the schema and column expect.
+ */
+function GraduationField({
+  value,
+  onChange,
+  invalid,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  invalid?: boolean;
+}) {
+  const [year, month] = value.split("-");
+  // Only future years: a graduation date in the past is always a mistake.
+  const thisYear = new Date().getFullYear();
+  const years = Array.from({ length: 8 }, (_, i) => String(thisYear + i));
+
+  const set = (y: string, m: string) => onChange(y && m ? `${y}-${m}` : "");
+
+  return (
+    <div className="flex gap-2">
+      <select
+        aria-label="Graduation month"
+        value={month ?? ""}
+        onChange={(e) => set(year ?? "", e.target.value)}
+        className={clsx(FIELD, invalid && "border-terminal-red!")}
+      >
+        <option value="">Month</option>
+        {MONTHS.map(([v, label]) => (
+          <option key={v} value={v}>{label}</option>
+        ))}
+      </select>
+      <select
+        aria-label="Graduation year"
+        value={year ?? ""}
+        onChange={(e) => set(e.target.value, month ?? "")}
+        className={clsx(FIELD, "w-[110px]", invalid && "border-terminal-red!")}
+      >
+        <option value="">Year</option>
+        {years.map((y) => (
+          <option key={y} value={y}>{y}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 function FieldError({ msg }: { msg?: string }) {
   if (!msg) return null;
   return (
@@ -554,7 +614,11 @@ function StepFields({
           </div>
           <div className="flex-1">
             <Label>Graduation</Label>
-            <input {...f("graduation")} type="month" />
+            <GraduationField
+              value={answers.graduation ?? ""}
+              onChange={(v) => onChange({ graduation: v })}
+              invalid={!!errors.graduation}
+            />
             <FieldError msg={errors.graduation} />
           </div>
           <div className="sm:w-[132px]">
