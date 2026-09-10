@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       // Matches what Knight Hacks request: enough to identify the applicant
       // and add them to the server later. Discord does NOT return a usable
       // email even with the email scope, which is why the form asks for one.
-      scopes: "identify guilds.join",
+      scopes: "guilds.join",
     },
   });
 
