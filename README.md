@@ -17,32 +17,32 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 See `CLAUDE.md` for the design system, folder layout, and conventions, and `TASKS.md` for what's still to build.
 
-## Database (Prisma + Supabase)
+## Database (Prisma + Supabase) & Auth (Supabase)
 
 The app uses [Prisma 7](https://www.prisma.io/docs) against a shared Supabase
-Postgres database. Prisma 7 has no schema-level connection URL — the CLI and
-the app's runtime client are configured separately (see `prisma.config.ts` and
-`src/lib/prisma.ts` if you want the details).
+Postgres database, and Supabase Auth for sign-in. Prisma 7 has no
+schema-level connection URL — the CLI and the app's runtime client are
+configured separately (see `prisma.config.ts` and `src/lib/prisma.ts` if you
+want the details).
 
-**1. Get the connection strings.** Ask a teammate for the two Supabase pooler
-URLs, or grab them yourself from the Supabase dashboard under **Project
-Settings → Database → Connection string** (transaction pooler = port `6543`
-for `DATABASE_URL`, session pooler = port `5432` for `DIRECT_URL`).
+**1. Create your env file.** Copy `.env.example` to `.env` and fill in real
+values — one file covers both the Next.js app and the Prisma CLI (Prisma 7's
+CLI only reads `.env`, and Next.js reads it too, so there's no need for a
+separate `.env.local`). Gitignored, never commit it.
+
+**2. Get the connection strings and Supabase keys.** Ask a teammate, or grab
+them yourself from the Supabase dashboard:
+
+- `DATABASE_URL` / `DIRECT_URL` — **Project Settings → Database → Connection
+  string** (transaction pooler = port `6543` for `DATABASE_URL`, session
+  pooler = port `5432` for `DIRECT_URL`).
+- `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` —
+  **Project Settings → API**.
 
 If your database password contains special characters (`!`, `@`, `#`, `%`,
 `/`, `:`, `?`, etc.), they must be percent-encoded in the URL (`!` → `%21`,
 `@` → `%40`, and so on) — Supabase's dashboard connection strings already come
 pre-encoded, so copying from there avoids this entirely.
-
-**2. Create two env files with the same values** — yes, two; this is a real
-gotcha, not a typo:
-
-- **`.env.local`** — read by the Next.js app at runtime. Copy `.env.example`
-  to `.env.local` and fill in `DATABASE_URL` / `DIRECT_URL`. Gitignored.
-- **`.env`** — read by the Prisma CLI (`migrate`, `generate`, `studio`).
-  Prisma 7's CLI does **not** read `.env.local` at all, only `.env`, so copy
-  the exact same two lines into a `.env` file too. Also gitignored — never
-  commit either file.
 
 **3. Generate the client and apply migrations:**
 
