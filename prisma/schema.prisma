@@ -93,9 +93,10 @@ model Application {
   gender        String?
   raceEthnicity String?
 
-  /// The two short answers.
+  /// The three short answers.
   whyAttend String @db.Text
   whatBuild String @db.Text
+  quirkFact String @db.Text
 
   /// Meal preference is collected post-acceptance on the dashboard, not on the
   /// application, so this is nullable.

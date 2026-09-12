@@ -217,5 +217,6 @@ export const applicationCopy = {
   questions: [
     "Why do you want to attend HackJam '26?",
     "What do you hope to build or learn?",
+    "Tell us a fun fact or a joke that you think shows your personality"
   ],
 };
