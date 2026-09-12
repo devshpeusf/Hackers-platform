@@ -164,30 +164,42 @@ const MONTHS = [
  * selects can't be partially valid, need no format hint, and behave the same
  * in every browser.
  *
- * Still stores the "YYYY-MM" string the schema and column expect.
+ * Still stores the "YYYY-MM" string the schema and column expect. Holds its
+ * own draft state (like SchoolPicker) rather than being fully controlled by
+ * `answers.graduation`: it used to derive month/year straight from the
+ * parent value and only call onChange once both were picked, which meant
+ * picking just one and leaving the other blank got silently reported as ""
+ * back up — the select you'd just touched appeared to reset to its
+ * placeholder, because the parent's value never actually changed. Now a
+ * partial pick sticks locally and onChange only fires once both are set.
  */
 function GraduationField({
-  value,
+  defaultValue,
   onChange,
   invalid,
 }: {
-  value: string;
+  defaultValue: string;
   onChange: (v: string) => void;
   invalid?: boolean;
 }) {
-  const [year, month] = value.split("-");
+  const [year, setYear] = useState(() => defaultValue.split("-")[0] ?? "");
+  const [month, setMonth] = useState(() => defaultValue.split("-")[1] ?? "");
   // Only future years: a graduation date in the past is always a mistake.
   const thisYear = new Date().getFullYear();
   const years = Array.from({ length: 8 }, (_, i) => String(thisYear + i));
 
-  const set = (y: string, m: string) => onChange(y && m ? `${y}-${m}` : "");
+  const set = (y: string, m: string) => {
+    setYear(y);
+    setMonth(m);
+    if (y && m) onChange(`${y}-${m}`);
+  };
 
   return (
     <div className="flex gap-2">
       <select
         aria-label="Graduation month"
-        value={month ?? ""}
-        onChange={(e) => set(year ?? "", e.target.value)}
+        value={month}
+        onChange={(e) => set(year, e.target.value)}
         className={clsx(FIELD, invalid && "border-terminal-red!")}
       >
         <option value="">Month</option>
@@ -197,8 +209,8 @@ function GraduationField({
       </select>
       <select
         aria-label="Graduation year"
-        value={year ?? ""}
-        onChange={(e) => set(e.target.value, month ?? "")}
+        value={year}
+        onChange={(e) => set(e.target.value, month)}
         className={clsx(FIELD, "w-[110px]", invalid && "border-terminal-red!")}
       >
         <option value="">Year</option>
@@ -615,7 +627,7 @@ function StepFields({
           <div className="flex-1">
             <Label>Graduation</Label>
             <GraduationField
-              value={answers.graduation ?? ""}
+              defaultValue={answers.graduation ?? ""}
               onChange={(v) => onChange({ graduation: v })}
               invalid={!!errors.graduation}
             />
