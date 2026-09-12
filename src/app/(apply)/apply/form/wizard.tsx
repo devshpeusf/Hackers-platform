@@ -11,6 +11,11 @@ import SchoolPicker from "@/components/ui/SchoolPicker";
 import {
   validateStep,
   STEP_FIELDS as STEP_FIELDS_BY_STEP,
+  COUNTRIES,
+  LEVELS_OF_STUDY,
+  GENDERS,
+  RACES,
+  SHIRT_SIZES,
   type ApplicationInput,
 } from "@/lib/application-schema";
 import { submitApplication, type SubmitResult } from "./actions";
@@ -58,7 +63,14 @@ function answersReducer(state: Answers, patch: Answers): Answers {
   return { ...state, ...patch };
 }
 
-export default function ApplicationWizard({ identity }: { identity: ApplicantIdentity }) {
+export default function ApplicationWizard({
+  identity,
+  eventStartDate,
+}: {
+  identity: ApplicantIdentity;
+  /** The 18+ check (PLAT-19) is judged against this, not against today. */
+  eventStartDate: Date;
+}) {
   // Starts at 1: step 0 (sign-in) is the server-rendered /apply page, so that
   // screen needs no hydration to be clickable.
   const [step, setStep] = useState(1);
@@ -68,7 +80,7 @@ export default function ApplicationWizard({ identity }: { identity: ApplicantIde
   const [pending, startTransition] = useTransition();
 
   function goNext() {
-    const stepErrors = validateStep(step, answers);
+    const stepErrors = validateStep(step, answers, eventStartDate);
     if (Object.keys(stepErrors).length) {
       setErrors(stepErrors);
       return;
@@ -122,33 +134,6 @@ export default function ApplicationWizard({ identity }: { identity: ApplicantIde
 
 const FIELD =
   "w-full bg-surface-bg/60 border border-[rgba(244,241,251,0.14)] px-[14px] py-3 text-[13px] text-text-primary placeholder:text-text-dim outline-none focus:border-accent-teal/55 focus:shadow-[0_0_0_3px_rgba(33,230,193,0.1)] transition-colors";
-
-/**
- * Option lists. Values are stored verbatim — no codes — so a row in the
- * database reads the same as what the applicant picked, and MLH reporting
- * doesn't need a lookup table.
- */
-const COUNTRIES = ["United States", "Canada", "Mexico", "India", "Other"];
-const LEVELS_OF_STUDY = [
-  "Undergraduate University (3+ year)",
-  "Undergraduate University (2 year)",
-  "Graduate University (Masters, Doctoral, etc)",
-  "High School",
-  "Code School / Bootcamp",
-  "Other",
-];
-const GENDERS = ["Woman", "Man", "Non-binary", "Prefer to self-describe"];
-const RACES = [
-  "Asian",
-  "Black or African American",
-  "Hispanic / Latino / Spanish Origin",
-  "Middle Eastern",
-  "Native American or Alaskan Native",
-  "Native Hawaiian or Other Pacific Islander",
-  "White",
-  "Other",
-];
-const SHIRT_SIZES = ["XS", "S", "M", "L", "XL", "2XL", "3XL"];
 
 const MONTHS = [
   ["01", "January"], ["02", "February"], ["03", "March"], ["04", "April"],
@@ -669,10 +654,12 @@ function StepFields({
           <div className="flex-1">
             <Label optional>GitHub</Label>
             <input {...f("gitHub")} placeholder="username or URL" />
+            <FieldError msg={errors.gitHub} />
           </div>
           <div className="flex-1">
             <Label optional>LinkedIn</Label>
             <input {...f("linkedIn")} placeholder="username or URL" />
+            <FieldError msg={errors.linkedIn} />
           </div>
         </div>
         <div className="flex items-center gap-3.5 border border-dashed border-text-primary/20 bg-surface-bg/60 px-3.5 py-3.5">
