@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { toApplicantIdentity } from "@/lib/supabase/user";
 import { getOpenEvent } from "@/lib/events";
-import { applicationSchema, type ApplicationInput } from "@/lib/application-schema";
+import { buildApplicationSchema, type ApplicationInput } from "@/lib/application-schema";
 
 export type SubmitResult =
   | { ok: true }
@@ -34,9 +34,16 @@ export async function submitApplication(input: ApplicationInput): Promise<Submit
 
   const identity = toApplicantIdentity(user);
 
-  // 2. Re-validate. The client gates each step, but that's a UX affordance,
+  // 2. Which event are they applying to? Needed before validation, not just
+  //    after it — the age-cutoff check is judged against the event's start
+  //    date (see application-schema.ts), so the schema can't be built until
+  //    this is known.
+  const event = await getOpenEvent();
+  if (!event) return { ok: false, error: "closed" };
+
+  // 3. Re-validate. The client gates each step, but that's a UX affordance,
   //    not a guarantee.
-  const parsed = applicationSchema.safeParse(input);
+  const parsed = buildApplicationSchema(event.startDate).safeParse(input);
   if (!parsed.success) {
     const fields: Record<string, string> = {};
     for (const issue of parsed.error.issues) {
@@ -46,10 +53,6 @@ export async function submitApplication(input: ApplicationInput): Promise<Submit
     return { ok: false, error: "validation", fields };
   }
   const v = parsed.data;
-
-  // 3. Which event are they applying to?
-  const event = await getOpenEvent();
-  if (!event) return { ok: false, error: "closed" };
 
   try {
     // 4. Person and Application together — a Person with no Application is a
