@@ -93,6 +93,7 @@ export async function submitApplication(input: ApplicationInput): Promise<Submit
 
           whyAttend: v.whyAttend,
           whatBuild: v.whatBuild,
+          quirkFact: v.quirkFact,
           gitHub: v.gitHub,
           linkedIn: v.linkedIn,
 

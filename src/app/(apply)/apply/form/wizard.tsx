@@ -639,7 +639,7 @@ function StepFields({
   if (step === 4) {
     return (
       <>
-        {(["whyAttend", "whatBuild"] as const).map((key, i) => (
+        {(["whyAttend", "whatBuild", "quirkFact"] as const).map((key, i) => (
           <div key={key}>
             <Label>
               {applicationCopy.questions[i]}{" "}

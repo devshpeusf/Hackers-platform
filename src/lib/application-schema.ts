@@ -78,6 +78,7 @@ export const applicationSchema = z.object({
   // ---- step 4: experience ----
   whyAttend: z.string({ error: "Tell us a little" }).trim().min(1, "Tell us a little").max(5000),
   whatBuild: z.string({ error: "Tell us a little" }).trim().min(1, "Tell us a little").max(5000),
+  quirkFact: z.string({ error: "Tell us a little" }).trim().min(1, "Tell us a little").max(5000),
   gitHub: z.string().trim().max(255).optional().transform((v) => (v ? v : null)),
   linkedIn: z.string().trim().max(255).optional().transform((v) => (v ? v : null)),
 
@@ -108,7 +109,7 @@ export const STEP_FIELDS = {
   1: ["firstName", "lastName", "email", "phone"],
   2: ["dateOfBirth", "country", "levelOfStudy", "gender", "raceEthnicity"],
   3: ["school", "schoolSource", "major", "graduation", "shirtSize"],
-  4: ["whyAttend", "whatBuild", "gitHub", "linkedIn"],
+  4: ["whyAttend", "whatBuild", "quirkFact", "gitHub", "linkedIn"],
   5: ["agreedCodeOfConduct", "agreedDataSharing", "agreedMarketing"],
 } as const satisfies Record<number, readonly (keyof ApplicationInput)[]>;
 
