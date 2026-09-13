@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 /** Routes that require a signed-in applicant. */
-const PROTECTED = ["/apply/form"];
+const PROTECTED = ["/apply/form", "/apply/status", "/apply/applied"];
 
 /**
  * Refreshes the auth session on every request, and gates the protected routes.
