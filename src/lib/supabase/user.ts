@@ -27,6 +27,16 @@ export type ApplicantIdentity = {
   raw: Record<string, unknown>;
 };
 
+/**
+ * Discord retired discriminators: modern accounts report "#0", which is a
+ * placeholder meaning "no discriminator" and shouldn't be shown to anyone.
+ * Legacy accounts still carry a real one (#1234) that IS part of their name,
+ * so only "#0" is stripped.
+ */
+function stripDeadDiscriminator(name: string): string {
+  return name.replace(/#0$/, "");
+}
+
 function pick(meta: Record<string, unknown>, ...keys: string[]): string | null {
   for (const k of keys) {
     const v = meta[k];
@@ -39,10 +49,11 @@ export function toApplicantIdentity(user: User): ApplicantIdentity {
   const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
   const claims = (meta.custom_claims ?? {}) as Record<string, unknown>;
 
-  const username =
+  const username = stripDeadDiscriminator(
     pick(meta, "preferred_username", "user_name", "name", "full_name") ??
-    pick(claims, "global_name") ??
-    "unknown";
+      pick(claims, "global_name") ??
+      "unknown",
+  );
 
   return {
     discordId:
