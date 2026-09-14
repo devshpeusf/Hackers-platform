@@ -10,6 +10,15 @@ import type { User } from "@supabase/supabase-js";
  * someone signs in for real.
  */
 export type ApplicantIdentity = {
+  /**
+   * Supabase's own internal user id (what `auth.uid()` returns in Postgres),
+   * NOT the same value as discordId below. Storage RLS policies can only
+   * check `auth.uid()` — Postgres has no native concept of "Discord id", that
+   * only exists because this app parses it out of user_metadata. Needed for
+   * the resume upload path, which writes into a per-user folder keyed on
+   * this value; using discordId there would make every upload fail RLS.
+   */
+  supabaseUserId: string;
   /** Discord's own user id — the stable identity to key an application on. */
   discordId: string;
   /** The @handle, e.g. "mreyes". */
@@ -56,6 +65,7 @@ export function toApplicantIdentity(user: User): ApplicantIdentity {
   );
 
   return {
+    supabaseUserId: user.id,
     discordId:
       pick(meta, "provider_id", "sub") ??
       user.identities?.find((i) => i.provider === "discord")?.id ??
