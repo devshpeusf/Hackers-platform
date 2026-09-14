@@ -7,6 +7,8 @@ import clsx from "@/lib/clsx";
 import { STARFIELD } from "../../_shared";
 import AlreadyApplied, { ResultScreen } from "../../_already-applied";
 import type { ApplicantIdentity } from "@/lib/supabase/user";
+import { createClient } from "@/lib/supabase/client";
+import { uploadResume, validateResumeFile } from "@/lib/supabase/storage";
 import DiscordIcon from "@/components/ui/DiscordIcon";
 import SchoolPicker from "@/components/ui/SchoolPicker";
 import {
@@ -81,6 +83,15 @@ export default function ApplicationWizard({
   const [result, setResult] = useState<SubmitResult | null>(null);
   const [pending, startTransition] = useTransition();
 
+  // Resume lives on its own, separate from `answers`: Resume is its own
+  // Prisma table (not a column on Application), so it isn't part of the Zod
+  // schema `answers` mirrors. Held as a real File, not uploaded, until
+  // SUBMIT — consistent with "nothing persists until SUBMIT" for everything
+  // else in this wizard.
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [resumeError, setResumeError] = useState<string | null>(null);
+  const [supabase] = useState(() => createClient());
+
   function goNext() {
     const stepErrors = validateStep(step, answers, eventStartDate);
     if (Object.keys(stepErrors).length) {
@@ -88,10 +99,40 @@ export default function ApplicationWizard({
       return;
     }
     setErrors({});
+
+    if (step === 4) {
+      if (!resumeFile) {
+        setResumeError("Attach your resume to continue");
+        return;
+      }
+      setResumeError(null);
+    }
+
     if (step < LAST_STEP) return setStep((s) => s + 1);
 
     startTransition(async () => {
-      const res = await submitApplication(answers as ApplicationInput);
+      if (!resumeFile) {
+        // Shouldn't happen — step 4 already gates this — but keeps this
+        // branch honest without a non-null assertion.
+        setResumeError("Attach your resume to continue");
+        setStep(4);
+        return;
+      }
+
+      // Uploaded client-side, direct to the bucket, before the server
+      // action is even called — the action only ever sees the resulting
+      // key, never the file's bytes.
+      const uploaded = await uploadResume(supabase, identity.supabaseUserId, resumeFile);
+      if (!uploaded.ok) {
+        setResumeError(uploaded.error);
+        setStep(4);
+        return;
+      }
+
+      const res = await submitApplication(answers as ApplicationInput, {
+        storageKey: uploaded.storageKey,
+        fileName: uploaded.fileName,
+      });
       setResult(res);
       // A server-side validation failure means something got past the client
       // gate — send them back to the step that owns the first bad field.
@@ -102,6 +143,10 @@ export default function ApplicationWizard({
           (STEP_FIELDS_BY_STEP[n] as readonly string[]).includes(first),
         );
         if (owning) setStep(owning);
+      }
+      if (!res.ok && res.error === "resume") {
+        setResumeError(res.message);
+        setStep(4);
       }
     });
   }
@@ -120,6 +165,12 @@ export default function ApplicationWizard({
       errors={errors}
       pending={pending}
       failed={result && !result.ok && (result.error === "unknown" || result.error === "unauthenticated") ? result.error : null}
+      resumeFile={resumeFile}
+      resumeError={resumeError}
+      onResumeSelect={(file, err) => {
+        setResumeFile(file);
+        setResumeError(err);
+      }}
       onChange={patch}
       onBack={() => {
         setErrors({});
@@ -261,6 +312,9 @@ function Wizard({
   errors,
   pending,
   failed,
+  resumeFile,
+  resumeError,
+  onResumeSelect,
   onChange,
   onBack,
   onNext,
@@ -271,6 +325,9 @@ function Wizard({
   errors: Record<string, string>;
   pending: boolean;
   failed: "unknown" | "unauthenticated" | null;
+  resumeFile: File | null;
+  resumeError: string | null;
+  onResumeSelect: (file: File | null, error: string | null) => void;
   onChange: (patch: Answers) => void;
   onBack: () => void;
   onNext: () => void;
@@ -415,7 +472,16 @@ function Wizard({
           </div>
 
           <div className="flex flex-1 flex-col gap-[19px]">
-            <StepFields step={step} identity={identity} answers={answers} errors={errors} onChange={onChange} />
+            <StepFields
+              step={step}
+              identity={identity}
+              answers={answers}
+              errors={errors}
+              resumeFile={resumeFile}
+              resumeError={resumeError}
+              onResumeSelect={onResumeSelect}
+              onChange={onChange}
+            />
           </div>
         </div>
 
@@ -474,12 +540,18 @@ function StepFields({
   identity,
   answers,
   errors,
+  resumeFile,
+  resumeError,
+  onResumeSelect,
   onChange,
 }: {
   step: number;
   identity: ApplicantIdentity;
   answers: Answers;
   errors: Record<string, string>;
+  resumeFile: File | null;
+  resumeError: string | null;
+  onResumeSelect: (file: File | null, error: string | null) => void;
   onChange: (patch: Answers) => void;
 }) {
   /** Wires one field to the reducer and shows its error. */
@@ -687,17 +759,39 @@ function StepFields({
             <FieldError msg={errors.linkedIn} />
           </div>
         </div>
-        <div className="flex items-center gap-3.5 border border-dashed border-text-primary/20 bg-surface-bg/60 px-3.5 py-3.5">
-          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-pink-light)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M14 3v5h5" />
-            <path d="M6 3h8l5 5v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
-          </svg>
-          <span className="flex-1 text-xs text-text-dim">
-            Resume &mdash; PDF, max 5MB &middot; shared with sponsors
-          </span>
-          <span className="pixel-btn-outline cursor-pointer bg-surface-bg px-4 py-2.5 font-body text-[10px] font-bold tracking-wide">
-            CHOOSE FILE
-          </span>
+        <div>
+          <Label>Resume</Label>
+          <div
+            className={clsx(
+              "flex items-center gap-3.5 border border-dashed bg-surface-bg/60 px-3.5 py-3.5",
+              resumeError ? "border-terminal-red" : "border-text-primary/20",
+            )}
+          >
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-pink-light)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+              <path d="M14 3v5h5" />
+              <path d="M6 3h8l5 5v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
+            </svg>
+            <span className="flex-1 truncate text-xs text-text-dim">
+              {resumeFile ? resumeFile.name : "PDF, max 5MB — shared with sponsors"}
+            </span>
+            <label className="pixel-btn-outline shrink-0 cursor-pointer bg-surface-bg px-4 py-2.5 font-body text-[10px] font-bold tracking-wide">
+              {resumeFile ? "CHANGE FILE" : "CHOOSE FILE"}
+              <input
+                type="file"
+                accept="application/pdf"
+                className="sr-only"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null;
+                  // Reset so picking the exact same file again still fires onChange.
+                  e.target.value = "";
+                  if (!file) return;
+                  const err = validateResumeFile(file);
+                  onResumeSelect(err ? null : file, err);
+                }}
+              />
+            </label>
+          </div>
+          <FieldError msg={resumeError ?? undefined} />
         </div>
       </>
     );

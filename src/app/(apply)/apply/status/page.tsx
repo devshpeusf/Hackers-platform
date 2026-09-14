@@ -183,7 +183,11 @@ function Section({
         <div className="mb-2 font-pixel text-[9px] text-accent-pink">{number}</div>
         <div className="text-[13px] font-bold tracking-wide">{title}</div>
       </div>
-      <div className="flex flex-1 flex-col gap-4">{children}</div>
+      {/* min-w-0: a flex item defaults to min-width:auto, which refuses to
+          shrink below its own content's natural width — a long unbroken
+          answer would push this column (and the row it's in) wider than the
+          card no matter what wrapping CSS lives inside it. */}
+      <div className="flex min-w-0 flex-1 flex-col gap-4">{children}</div>
     </div>
   );
 }

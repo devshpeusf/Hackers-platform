@@ -42,8 +42,8 @@ export default function Field({
   className,
 }: FieldProps) {
   const boxClasses = clsx(
-    "field w-full px-[14px] py-3 text-[13px]",
-    multiline ? "h-24" : "flex items-center justify-between",
+    "field w-full break-words px-[14px] py-3 text-[13px]",
+    multiline ? "h-24 overflow-y-auto" : "flex items-center justify-between",
     value ? toneClass[tone] : "text-text-dim",
   );
 
@@ -56,7 +56,12 @@ export default function Field({
         </div>
       )}
       <div className={boxClasses}>
-        <span>{value ?? placeholder}</span>
+        {/* min-w-0 matters here: a flex item won't shrink below its own
+            unwrapped content width by default, so break-words alone doesn't
+            stop a long spaceless value (a URL, a run-on answer with no
+            spaces) from overflowing the card — this is what actually lets
+            it wrap instead. */}
+        <span className="min-w-0 break-words">{value ?? placeholder}</span>
         {rightIcon}
       </div>
     </div>

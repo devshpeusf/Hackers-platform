@@ -4,6 +4,20 @@ export type UploadResumeResult =
   | { ok: true; storageKey: string; fileName: string }
   | { ok: false; error: string };
 
+export const RESUME_MAX_BYTES = 5 * 1024 * 1024;
+
+/**
+ * Client-side pre-check before even attempting an upload — instant feedback
+ * instead of a round trip just to get bounced by the bucket's own limits.
+ * The bucket (application/pdf, 5MB) is still the real enforcement; this is
+ * purely a UX nicety, so it's fine for the two to describe the same rule.
+ */
+export function validateResumeFile(file: File): string | null {
+  if (file.type !== "application/pdf") return "Resume must be a PDF";
+  if (file.size > RESUME_MAX_BYTES) return "Resume must be under 5MB";
+  return null;
+}
+
 /**
  * Uploads a resume to the `resumes` bucket under the caller's own folder.
  *

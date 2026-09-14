@@ -10,7 +10,15 @@ import { buildApplicationSchema, type ApplicationInput } from "@/lib/application
 export type SubmitResult =
   | { ok: true }
   | { ok: false; error: "unauthenticated" | "closed" | "duplicate" | "unknown" }
-  | { ok: false; error: "validation"; fields: Record<string, string> };
+  | { ok: false; error: "validation"; fields: Record<string, string> }
+  | { ok: false; error: "resume"; message: string };
+
+/**
+ * The client uploads the resume to Storage itself (direct-to-bucket, so the
+ * file's bytes never pass through this action) and only hands over the
+ * result — see src/lib/supabase/storage.ts.
+ */
+export type ResumeUpload = { storageKey: string; fileName: string };
 
 /**
  * Writes a submitted application (PLAT-22).
@@ -23,7 +31,10 @@ export type SubmitResult =
  * designed screen for each failure (already-applied, applications-closed), and
  * a thrown error would just surface as a generic boundary.
  */
-export async function submitApplication(input: ApplicationInput): Promise<SubmitResult> {
+export async function submitApplication(
+  input: ApplicationInput,
+  resume: ResumeUpload,
+): Promise<SubmitResult> {
   // 1. Who is this? From the cookie, never from the payload — otherwise anyone
   //    could submit an application in someone else's name.
   const supabase = await createClient();
@@ -34,14 +45,28 @@ export async function submitApplication(input: ApplicationInput): Promise<Submit
 
   const identity = toApplicantIdentity(user);
 
-  // 2. Which event are they applying to? Needed before validation, not just
+  // 2. The resume was already uploaded client-side before this was called —
+  //    but a bypassed client could hand over any storageKey string, pointing
+  //    at someone else's file or nothing at all. The bucket's RLS only
+  //    allows a folder prefix matching the uploader's own auth.uid(), so a
+  //    legitimate upload can only ever produce a key starting with that —
+  //    anything else means this didn't come from a real upload by this user.
+  if (!resume.storageKey.startsWith(`${user.id}/`)) {
+    return {
+      ok: false,
+      error: "resume",
+      message: "That upload doesn't look right — try attaching your resume again.",
+    };
+  }
+
+  // 3. Which event are they applying to? Needed before validation, not just
   //    after it — the age-cutoff check is judged against the event's start
   //    date (see application-schema.ts), so the schema can't be built until
   //    this is known.
   const event = await getOpenEvent();
   if (!event) return { ok: false, error: "closed" };
 
-  // 3. Re-validate. The client gates each step, but that's a UX affordance,
+  // 4. Re-validate. The client gates each step, but that's a UX affordance,
   //    not a guarantee.
   const parsed = buildApplicationSchema(event.startDate).safeParse(input);
   if (!parsed.success) {
@@ -55,8 +80,8 @@ export async function submitApplication(input: ApplicationInput): Promise<Submit
   const v = parsed.data;
 
   try {
-    // 4. Person and Application together — a Person with no Application is a
-    //    half-finished record nobody would ever clean up.
+    // 5. Person, Resume, and Application together — a Person with no
+    //    Application is a half-finished record nobody would ever clean up.
     await prisma.$transaction(async (tx) => {
       const person = await tx.person.upsert({
         where: { discordId: identity.discordId },
@@ -75,6 +100,16 @@ export async function submitApplication(input: ApplicationInput): Promise<Submit
           email: v.email,
           phoneNum: v.phone,
         },
+      });
+
+      // Upsert, not create: a returning applicant whose first attempt
+      // uploaded a resume but failed before Application.create() (a
+      // duplicate check, a dropped connection) gets their new upload linked
+      // instead of a P2002 on the unique personId.
+      await tx.resume.upsert({
+        where: { personId: person.id },
+        update: { fileName: resume.fileName, storageKey: resume.storageKey },
+        create: { personId: person.id, fileName: resume.fileName, storageKey: resume.storageKey },
       });
 
       await tx.application.create({
