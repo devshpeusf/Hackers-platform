@@ -67,14 +67,7 @@ function answersReducer(state: Answers, patch: Answers): Answers {
   return { ...state, ...patch };
 }
 
-export default function ApplicationWizard({
-  identity,
-  eventStartDate,
-}: {
-  identity: ApplicantIdentity;
-  /** The 18+ check (PLAT-19) is judged against this, not against today. */
-  eventStartDate: Date;
-}) {
+export default function ApplicationWizard({ identity }: { identity: ApplicantIdentity }) {
   // Starts at 1: step 0 (sign-in) is the server-rendered /apply page, so that
   // screen needs no hydration to be clickable.
   const [step, setStep] = useState(1);
@@ -93,7 +86,7 @@ export default function ApplicationWizard({
   const [supabase] = useState(() => createClient());
 
   function goNext() {
-    const stepErrors = validateStep(step, answers, eventStartDate);
+    const stepErrors = validateStep(step, answers);
     if (Object.keys(stepErrors).length) {
       setErrors(stepErrors);
       return;

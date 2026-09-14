@@ -89,6 +89,12 @@ model Application {
   /// Stored instead of an age: an age column is wrong within a year, and MLH's
   /// 80%-student rule is judged against the event date.
   dateOfBirth  DateTime
+  /// Computed from dateOfBirth vs. the event's start date at submission time
+  /// — not a self-reported answer, so it can't disagree with the birthdate
+  /// above. HackJam allows minors (MLH's own Minor Policy covers them), this
+  /// just flags who needs the extra consent paperwork so a lead can follow
+  /// up. No dashboard reads this yet; query/filter directly until one exists.
+  isMinor       Boolean
   /// Demographics MLH reports on. Optional — nobody is required to answer.
   gender        String?
   raceEthnicity String?

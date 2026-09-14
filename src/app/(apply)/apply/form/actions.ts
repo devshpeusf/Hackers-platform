@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { toApplicantIdentity } from "@/lib/supabase/user";
 import { getOpenEvent } from "@/lib/events";
-import { buildApplicationSchema, type ApplicationInput } from "@/lib/application-schema";
+import { applicationSchema, computeIsMinor, type ApplicationInput } from "@/lib/application-schema";
 
 export type SubmitResult =
   | { ok: true }
@@ -59,16 +59,13 @@ export async function submitApplication(
     };
   }
 
-  // 3. Which event are they applying to? Needed before validation, not just
-  //    after it — the age-cutoff check is judged against the event's start
-  //    date (see application-schema.ts), so the schema can't be built until
-  //    this is known.
+  // 3. Which event are they applying to?
   const event = await getOpenEvent();
   if (!event) return { ok: false, error: "closed" };
 
   // 4. Re-validate. The client gates each step, but that's a UX affordance,
   //    not a guarantee.
-  const parsed = buildApplicationSchema(event.startDate).safeParse(input);
+  const parsed = applicationSchema.safeParse(input);
   if (!parsed.success) {
     const fields: Record<string, string> = {};
     for (const issue of parsed.error.issues) {
@@ -78,6 +75,10 @@ export async function submitApplication(
     return { ok: false, error: "validation", fields };
   }
   const v = parsed.data;
+
+  // Not a rejection — HackJam allows minors — just recorded so a lead can
+  // follow up about the extra consent paperwork MLH requires for them.
+  const isMinor = computeIsMinor(v.dateOfBirth, event.startDate);
 
   try {
     // 5. Person, Resume, and Application together — a Person with no
@@ -126,6 +127,7 @@ export async function submitApplication(
 
           country: v.country,
           dateOfBirth: new Date(v.dateOfBirth),
+          isMinor,
           gender: v.gender,
           raceEthnicity: v.raceEthnicity,
 

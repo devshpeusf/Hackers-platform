@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { toApplicantIdentity } from "@/lib/supabase/user";
-import { getOpenEvent } from "@/lib/events";
 import { hasApplied } from "@/lib/applications";
 import ApplicationWizard from "./wizard";
 
@@ -16,13 +15,6 @@ import ApplicationWizard from "./wizard";
  * The middleware also gates this route. Checking again here is deliberate —
  * middleware runs on the edge and can be bypassed by config mistakes, and a
  * page that reads a session should not assume one exists.
- *
- * Also fetches the open event just for its start date — the 18+ age check
- * (PLAT-19) is judged against the event, not against today, so the wizard
- * needs it before it can validate step 2 at all. If there's no open event,
- * submission already fails with the "closed" screen either way; falling
- * back to "now" here just keeps the client-side check from crashing on a
- * missing date in that edge case, it doesn't newly handle "closed" itself.
  */
 export default async function ApplyFormPage() {
   const supabase = await createClient();
@@ -39,12 +31,5 @@ export default async function ApplyFormPage() {
   // SUBMIT that it was never needed — the unique constraint would reject it.
   if (await hasApplied(identity.discordId)) redirect("/apply/applied");
 
-  const event = await getOpenEvent();
-
-  return (
-    <ApplicationWizard
-      identity={toApplicantIdentity(user)}
-      eventStartDate={event?.startDate ?? new Date()}
-    />
-  );
+  return <ApplicationWizard identity={identity} />;
 }

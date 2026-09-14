@@ -10,13 +10,6 @@ import { z } from "zod";
  *
  * Field names match the Prisma columns so the action can hand the parsed
  * object almost straight to `create`.
- *
- * This is a function, not a plain object, because the age check (PLAT-19)
- * needs to know the event's start date — HackJam doesn't admit minors, and
- * "minor" is judged as of the event, not as of whenever someone happens to
- * fill out the form. Both call sites (validateStep, the server action)
- * already have the open event in hand before they validate, so they build
- * the schema with it rather than the schema reaching out for it itself.
  */
 
 /**
@@ -30,13 +23,19 @@ import { z } from "zod";
  * table.
  */
 export const COUNTRIES = ["United States", "Canada", "Mexico", "India", "Other"] as const;
+/**
+ * Deliberately no "Other" here, unlike the lists above — every option is
+ * something that implies current enrollment. HackJam is student-only;
+ * dropping the one catch-all that didn't say "I'm a student" is what
+ * actually blocks a working professional from having a truthful answer to
+ * pick, rather than trying to verify employment status some other way.
+ */
 export const LEVELS_OF_STUDY = [
   "Undergraduate University (3+ year)",
   "Undergraduate University (2 year)",
   "Graduate University (Masters, Doctoral, etc)",
   "High School",
   "Code School / Bootcamp",
-  "Other",
 ] as const;
 export const GENDERS = ["Woman", "Man", "Non-binary", "Prefer to self-describe"] as const;
 export const RACES = [
@@ -115,124 +114,126 @@ function platformLink(platformHost: string, label: string) {
 }
 
 /** MLH requires first name, last name, age, email, school, phone, country, level of study. */
-export function buildApplicationSchema(eventStartDate: Date) {
-  return z.object({
-    // ---- step 1: basics ----
-    firstName: z.string({ error: "Required" }).trim().min(1, "Required").max(100),
-    lastName: z.string({ error: "Required" }).trim().min(1, "Required").max(100),
-    email: z.email("Enter a valid email address").max(255),
-    /**
-     * Required, because MLH's member-event guidelines list phone number in the
-     * baseline every event must collect — and it's how organisers reach someone
-     * at the door when Discord isn't open on their laptop.
-     *
-     * The format rule is deliberately permissive: digits, spaces, dashes,
-     * brackets, dots and a leading +, with 7-15 digits (E.164's range), so
-     * international applicants aren't rejected by a US-shaped rule.
-     */
-    phone: z
-      .string({ error: "Required" })
-      .trim()
-      .min(1, "Required")
-      .max(40)
-      .regex(/^[+()\-.\s\d]+$/, "Enter a valid phone number")
-      .refine((v) => {
-        const digits = v.match(/\d/g)?.length ?? 0;
-        return digits >= 7 && digits <= 15;
-      }, "Enter a valid phone number"),
+export const applicationSchema = z.object({
+  // ---- step 1: basics ----
+  firstName: z.string({ error: "Required" }).trim().min(1, "Required").max(100),
+  lastName: z.string({ error: "Required" }).trim().min(1, "Required").max(100),
+  email: z.email("Enter a valid email address").max(255),
+  /**
+   * Required, because MLH's member-event guidelines list phone number in the
+   * baseline every event must collect — and it's how organisers reach someone
+   * at the door when Discord isn't open on their laptop.
+   *
+   * The format rule is deliberately permissive: digits, spaces, dashes,
+   * brackets, dots and a leading +, with 7-15 digits (E.164's range), so
+   * international applicants aren't rejected by a US-shaped rule.
+   */
+  phone: z
+    .string({ error: "Required" })
+    .trim()
+    .min(1, "Required")
+    .max(40)
+    .regex(/^[+()\-.\s\d]+$/, "Enter a valid phone number")
+    .refine((v) => {
+      const digits = v.match(/\d/g)?.length ?? 0;
+      return digits >= 7 && digits <= 15;
+    }, "Enter a valid phone number"),
 
-    // ---- step 2: about you ----
-    /**
-     * Stored rather than a computed age: an age column is wrong within a year.
-     *
-     * Also gated at 18+ as of the event's start date (not today, and not just
-     * "in the past") — HackJam doesn't admit minors, for liability reasons.
-     * "High School" stays a valid answer for levelOfStudy below: an 18-year-old
-     * high schooler is a real applicant, just not a 16-year-old one.
-     */
-    dateOfBirth: z
-      .iso.date("Enter a valid date")
-      .refine((v) => {
-        const dob = new Date(v);
-        const cutoff = new Date(eventStartDate);
-        cutoff.setUTCFullYear(cutoff.getUTCFullYear() - 18);
-        return dob <= cutoff;
-      }, "You must be 18 by the start of the event"),
-    country: z.enum(COUNTRIES, { error: "Required" }),
-    levelOfStudy: z.enum(LEVELS_OF_STUDY, { error: "Required" }),
-    /** Optional by design — MLH reports on these but nobody is required to answer. */
-    gender: optionalChoice(GENDERS),
-    raceEthnicity: optionalChoice(RACES),
+  // ---- step 2: about you ----
+  /**
+   * Stored rather than a computed age: an age column is wrong within a year.
+   *
+   * No longer gated at 18+ — HackJam allows minors (MLH's own Minor Policy
+   * covers them), it just needs to know who they are so a lead can follow
+   * up about the extra consent paperwork. See isMinor below, computed from
+   * this same value rather than asked separately, so it can't disagree
+   * with what's entered here.
+   */
+  dateOfBirth: z.iso.date("Enter a valid date"),
+  country: z.enum(COUNTRIES, { error: "Required" }),
+  levelOfStudy: z.enum(LEVELS_OF_STUDY, { error: "Required" }),
+  /** Optional by design — MLH reports on these but nobody is required to answer. */
+  gender: optionalChoice(GENDERS),
+  raceEthnicity: optionalChoice(RACES),
 
-    // ---- step 3: school ----
-    school: z.string({ error: "Pick your school" }).trim().min(1, "Pick your school").max(255),
-    /**
-     * Whether the school came off MLH's verified list or was typed by hand.
-     * `manual` rows need an organiser to normalise them before we report to
-     * MLH — see the note on PLAT-9.
-     */
-    schoolSource: z.enum(["catalog", "manual"], { error: "Pick your school from the list" }),
-    major: z.string({ error: "Required" }).trim().min(1, "Required").max(150),
-    /**
-     * From two <select>s, so "2027-05". The previous rule was min(1).max(20),
-     * which accepted a half-typed "2008" — a graduation date in the past,
-     * stored as valid, with nothing to flag it.
-     */
-    graduation: z
-      .string({ error: "Pick a month and year" })
-      .trim()
-      .regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Pick a month and year")
-      .refine((v) => {
-        const [y, m] = v.split("-").map(Number);
-        const end = new Date(y, m, 0); // last day of that month
-        return end >= new Date();
-      }, "That date is in the past"),
-    shirtSize: z.enum(SHIRT_SIZES, { error: "Required" }),
+  // ---- step 3: school ----
+  school: z.string({ error: "Pick your school" }).trim().min(1, "Pick your school").max(255),
+  /**
+   * Whether the school came off MLH's verified list or was typed by hand.
+   * `manual` rows need an organiser to normalise them before we report to
+   * MLH — see the note on PLAT-9.
+   */
+  schoolSource: z.enum(["catalog", "manual"], { error: "Pick your school from the list" }),
+  major: z.string({ error: "Required" }).trim().min(1, "Required").max(150),
+  /**
+   * From two <select>s, so "2027-05". The previous rule was min(1).max(20),
+   * which accepted a half-typed "2008" — a graduation date in the past,
+   * stored as valid, with nothing to flag it.
+   */
+  graduation: z
+    .string({ error: "Pick a month and year" })
+    .trim()
+    .regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Pick a month and year")
+    .refine((v) => {
+      const [y, m] = v.split("-").map(Number);
+      const end = new Date(y, m, 0); // last day of that month
+      return end >= new Date();
+    }, "That date is in the past"),
+  shirtSize: z.enum(SHIRT_SIZES, { error: "Required" }),
 
-    // ---- step 4: experience ----
-    // A bare min(1) let a one-character non-answer through. 100 characters is
-    // roughly a couple of sentences — enough that a real answer and a
-    // placeholder answer stop looking the same to the schema.
-    whyAttend: z
-      .string({ error: "Tell us a little" })
-      .trim()
-      .min(100, "Write a bit more — at least 100 characters")
-      .max(5000),
-    whatBuild: z
-      .string({ error: "Tell us a little" })
-      .trim()
-      .min(100, "Write a bit more — at least 100 characters")
-      .max(5000),
-    quirkFact: z
-      .string({ error: "Tell us a little" })
-      .trim()
-      .min(100, "Write a bit more — at least 100 characters")
-      .max(5000),
-    gitHub: platformLink("github.com", "GitHub"),
-    linkedIn: platformLink("linkedin.com", "LinkedIn"),
+  // ---- step 4: experience ----
+  // A bare min(1) let a one-character non-answer through. 100 characters is
+  // roughly a couple of sentences — enough that a real answer and a
+  // placeholder answer stop looking the same to the schema.
+  whyAttend: z
+    .string({ error: "Tell us a little" })
+    .trim()
+    .min(100, "Write a bit more — at least 100 characters")
+    .max(5000),
+  whatBuild: z
+    .string({ error: "Tell us a little" })
+    .trim()
+    .min(100, "Write a bit more — at least 100 characters")
+    .max(5000),
+  quirkFact: z
+    .string({ error: "Tell us a little" })
+    .trim()
+    .min(100, "Write a bit more — at least 100 characters")
+    .max(5000),
+  gitHub: platformLink("github.com", "GitHub"),
+  linkedIn: platformLink("linkedin.com", "LinkedIn"),
 
-    // ---- step 5: agreements ----
-    /**
-     * MLH requires the first two. Refusing at the schema level means the server
-     * can never write an application that lacks consent, no matter what the
-     * client sends.
-     */
-    agreedCodeOfConduct: z.literal(true, {
-      error: "You must agree to the MLH Code of Conduct",
-    }),
-    agreedDataSharing: z.literal(true, {
-      error: "You must agree to the MLH data sharing terms",
-    }),
-    /** Genuinely optional — MLH marketing email is opt-in. */
-    agreedMarketing: z.boolean(),
-  });
+  // ---- step 5: agreements ----
+  /**
+   * MLH requires the first two. Refusing at the schema level means the server
+   * can never write an application that lacks consent, no matter what the
+   * client sends.
+   */
+  agreedCodeOfConduct: z.literal(true, {
+    error: "You must agree to the MLH Code of Conduct",
+  }),
+  agreedDataSharing: z.literal(true, {
+    error: "You must agree to the MLH data sharing terms",
+  }),
+  /** Genuinely optional — MLH marketing email is opt-in. */
+  agreedMarketing: z.boolean(),
+});
+
+/**
+ * Whether an applicant will still be under 18 at the event's start date.
+ * Computed from dateOfBirth, not asked separately — see the note on that
+ * field above. Exported so the server action (the only other place this
+ * matters) doesn't duplicate the date math.
+ */
+export function computeIsMinor(dateOfBirth: string, eventStartDate: Date): boolean {
+  const dob = new Date(dateOfBirth);
+  const cutoff = new Date(eventStartDate);
+  cutoff.setUTCFullYear(cutoff.getUTCFullYear() - 18);
+  return dob > cutoff;
 }
 
-// Reference instance for type inference only — never parsed against. The
-// captured eventStartDate doesn't affect the inferred shape, so any date works.
-const schemaShape = buildApplicationSchema(new Date(0));
-export type ApplicationInput = z.input<typeof schemaShape>;
-export type ApplicationValues = z.output<typeof schemaShape>;
+export type ApplicationInput = z.input<typeof applicationSchema>;
+export type ApplicationValues = z.output<typeof applicationSchema>;
 
 /**
  * Which fields belong to which step, so the wizard can validate just the step
@@ -250,12 +251,11 @@ export const STEP_FIELDS = {
 export function validateStep(
   step: number,
   values: Partial<ApplicationInput>,
-  eventStartDate: Date,
 ): Record<string, string> {
   const fields = STEP_FIELDS[step as keyof typeof STEP_FIELDS];
   if (!fields) return {};
 
-  const result = buildApplicationSchema(eventStartDate).safeParse(values);
+  const result = applicationSchema.safeParse(values);
   if (result.success) return {};
 
   const errors: Record<string, string> = {};
