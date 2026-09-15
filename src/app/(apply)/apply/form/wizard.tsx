@@ -660,10 +660,11 @@ function StepFields({
             </select>
           </div>
         </div>
-        <div className="border-l-[3px] border-accent-purple bg-accent-purple/12 px-3.5 py-2.5 text-[11px] leading-[1.7] text-text-muted">
+        
+        {/* <div className="border-l-[3px] border-accent-purple bg-accent-purple/12 px-3.5 py-2.5 text-[11px] leading-[1.7] text-text-muted">
           SHPE is a Hispanic-serving organization, but HackJam is open to every USF student
           regardless of background.
-        </div>
+        </div> */}
       </>
     );
   }
@@ -729,8 +730,7 @@ function StepFields({
         {(["whyAttend", "whatBuild", "quirkFact"] as const).map((key, i) => (
           <div key={key}>
             <Label>
-              {applicationCopy.questions[i]}{" "}
-              <span className="text-accent-amber">[PLACEHOLDER]</span>
+              {applicationCopy.questions[i]}
             </Label>
             <textarea
               {...f(key)}
