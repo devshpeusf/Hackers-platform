@@ -139,13 +139,13 @@ export const applicationSteps: ApplicationStep[] = [
   { number: "01", label: "BASICS", heading: "THE BASICS", accent: "var(--color-accent-teal)", zone: "LOW ORBIT", altitude: "402", earthPx: 46,
     blurb: "Your name and how we reach you. Discord doesn't hand over an email, so we need one here." },
   { number: "02", label: "ABOUT YOU", heading: "ABOUT YOU", accent: "var(--color-accent-purple-light)", zone: "NEBULA FIELD", altitude: "318", earthPx: 60,
-    blurb: "MLH requires date of birth, country, and level of study. Demographics are yours to skip." },
+    blurb:"A couple of quick details about you."},
   { number: "03", label: "SCHOOL", heading: "YOUR SCHOOL", accent: "var(--color-accent-pink-light)", zone: "UPPER ATMOSPHERE", altitude: "210", earthPx: 76,
-    blurb: "Searches the MLH-verified list \u2014 13,103 schools. Acronyms work: type \u201cusf\u201d." },
+    blurb: "Helps us figure out exactly what university you come from, you can even use acronyms!" },
   { number: "04", label: "EXPERIENCE", heading: "YOUR EXPERIENCE", accent: "var(--color-accent-pink)", zone: "SUNSET BAND", altitude: "096", earthPx: 96,
-    blurb: "Two short answers. Links and resume are optional \u2014 first-time hackers are welcome." },
+    blurb: "Two short answers. Links are optional but resumes are required \u2014 first-time hackers are welcome." },
   { number: "05", label: "AGREEMENTS", heading: "THE FINE PRINT", accent: "var(--color-accent-amber)", zone: "SURFACE", altitude: "012", earthPx: 118,
-    blurb: "Exact MLH wording \u2014 don't paraphrase it. First two required, third opt-in." },
+    blurb: "MLH's standard agreements. Required to attend." },
 ];
 
 /**
@@ -163,8 +163,8 @@ export const applicationConsent = [
 ];
 
 /** Shown next to the consent boxes while the MLH application is pending. */
-export const mlhPendingNotice =
-  "We have applied to be an MLH Hack Day. These checkboxes only apply if our application is accepted \u2014 your information will not be shared if we do not become an MLH event.";
+export const mlhPendingNotice = "";
+// "We have applied to be an MLH Hack Day. These checkboxes only apply if our application is accepted \u2014 your information will not be shared if we do not become an MLH event."
 
 /**
  * Schools whose applicants we expect most, surfaced above equally-ranked
@@ -223,7 +223,7 @@ export const applicationCopy = {
   from: "hackjam26.com",
   heading: "LET'S GET YOU\nSIGNED UP",
   intro:
-    "Five short steps, about four minutes. Sign in with Discord \u2014 it's how we reach you about your application and how you get into the server.",
+    "Five short steps, about four minutes. Sign in with Discord \u2014 it's how you get into the server and access all relevant information",
   finePrint: "Applications close [DATE] \u00b7 we only read your username and ID.",
   /** Was "Answers save as you go" — we don't persist drafts, so it was a lie. */
   footerHint: "Nothing is submitted until the last step",
