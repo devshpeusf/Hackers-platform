@@ -52,23 +52,17 @@ export default function ApplyLandingPage() {
           SIGNED UP
         </h1>
 
-        <div className="mb-5">
+        <div className="mb-9">
           <Dots />
         </div>
 
-        <p className="mb-7 max-w-[430px] text-[13px] leading-[1.85] text-text-muted">
-          {applicationCopy.intro}
-        </p>
-
         <Link
           href="/auth/signin"
-          className="pixel-btn-solid inline-flex items-center justify-center gap-2.5 px-7 py-[15px] font-body text-xs font-bold tracking-wide text-surface-bg"
+          className="pixel-btn-solid inline-flex items-center justify-center gap-3 px-9 py-[18px] font-body text-sm font-bold tracking-wide text-surface-bg"
         >
-          <DiscordIcon size={18} />
+          <DiscordIcon size={20} />
           SIGN IN WITH DISCORD
         </Link>
-
-        <p className="mt-[18px] text-[11px] text-text-faintest">{applicationCopy.finePrint}</p>
       </div>
     </div>
   );

@@ -121,8 +121,6 @@ export type ApplicationStep = {
   label: string;
   /** Headline above the card. */
   heading: string;
-  /** Left-column blurb inside the card. */
-  blurb: string;
   /** Accent token for this step, matching the design's per-step colour. */
   accent: string;
   /**
@@ -135,17 +133,15 @@ export type ApplicationStep = {
   earthPx: number;
 };
 
+// No per-step blurb: four of the five just restated the label, and the one
+// genuinely useful tip (acronyms work in the school search) now lives in
+// SchoolPicker's own placeholder, right where someone's about to type it.
 export const applicationSteps: ApplicationStep[] = [
-  { number: "01", label: "BASICS", heading: "THE BASICS", accent: "var(--color-accent-teal)", zone: "LOW ORBIT", altitude: "402", earthPx: 46,
-    blurb: "Your name and how we reach you. Discord doesn't hand over an email, so we need one here." },
-  { number: "02", label: "ABOUT YOU", heading: "ABOUT YOU", accent: "var(--color-accent-purple-light)", zone: "NEBULA FIELD", altitude: "318", earthPx: 60,
-    blurb:"A couple of quick details about you."},
-  { number: "03", label: "SCHOOL", heading: "YOUR SCHOOL", accent: "var(--color-accent-pink-light)", zone: "UPPER ATMOSPHERE", altitude: "210", earthPx: 76,
-    blurb: "Helps us figure out exactly what university you come from, you can even use acronyms!" },
-  { number: "04", label: "EXPERIENCE", heading: "YOUR EXPERIENCE", accent: "var(--color-accent-pink)", zone: "SUNSET BAND", altitude: "096", earthPx: 96,
-    blurb: "Two short answers. Links are optional but resumes are required \u2014 first-time hackers are welcome." },
-  { number: "05", label: "AGREEMENTS", heading: "THE FINE PRINT", accent: "var(--color-accent-amber)", zone: "SURFACE", altitude: "012", earthPx: 118,
-    blurb: "MLH's standard agreements. Required to attend." },
+  { number: "01", label: "BASICS", heading: "THE BASICS", accent: "var(--color-accent-teal)", zone: "LOW ORBIT", altitude: "402", earthPx: 46 },
+  { number: "02", label: "ABOUT YOU", heading: "ABOUT YOU", accent: "var(--color-accent-purple-light)", zone: "NEBULA FIELD", altitude: "318", earthPx: 60 },
+  { number: "03", label: "SCHOOL", heading: "YOUR SCHOOL", accent: "var(--color-accent-pink-light)", zone: "UPPER ATMOSPHERE", altitude: "210", earthPx: 76 },
+  { number: "04", label: "EXPERIENCE", heading: "YOUR EXPERIENCE", accent: "var(--color-accent-pink)", zone: "SUNSET BAND", altitude: "096", earthPx: 96 },
+  { number: "05", label: "AGREEMENTS", heading: "THE FINE PRINT", accent: "var(--color-accent-amber)", zone: "SURFACE", altitude: "012", earthPx: 118 },
 ];
 
 /**
@@ -222,9 +218,6 @@ export const mlhRegistration = {
 export const applicationCopy = {
   from: "hackjam26.com",
   heading: "LET'S GET YOU\nSIGNED UP",
-  intro:
-    "Five short steps, about four minutes. Sign in with Discord \u2014 it's how you get into the server and access all relevant information",
-  finePrint: "Applications close [DATE] \u00b7 we only read your username and ID.",
   /** Was "Answers save as you go" — we don't persist drafts, so it was a lie. */
   footerHint: "Nothing is submitted until the last step",
   /** Placeholder questions \u2014 real copy is still a content decision. */

@@ -144,6 +144,7 @@ export default async function ApplicationStatusPage() {
             <Row label="Major" value={application.major} />
             <Row label="Graduation" value={formatGraduation(application.graduation)} />
             <Row label="Shirt Size" value={application.shirtSize} />
+            <Row label="Dietary Restriction" value={application.diet} />
           </Section>
 
           <Divider />
