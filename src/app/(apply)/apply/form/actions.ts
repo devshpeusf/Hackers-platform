@@ -80,6 +80,10 @@ export async function submitApplication(
   // follow up about the extra consent paperwork MLH requires for them.
   const isMinor = computeIsMinor(v.dateOfBirth, event.startDate);
 
+  // One column, not two: dietOther only carries meaning alongside "Other",
+  // so it's folded in here rather than given its own place in the schema.
+  const diet = v.diet === "Other" ? `Other: ${v.dietOther}` : v.diet;
+
   try {
     // 5. Person, Resume, and Application together — a Person with no
     //    Application is a half-finished record nobody would ever clean up.
@@ -124,6 +128,7 @@ export async function submitApplication(
           graduation: v.graduation,
           levelOfStudy: v.levelOfStudy,
           shirtSize: v.shirtSize,
+          diet,
 
           country: v.country,
           dateOfBirth: new Date(v.dateOfBirth),

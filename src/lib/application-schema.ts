@@ -49,6 +49,23 @@ export const RACES = [
   "Other",
 ] as const;
 export const SHIRT_SIZES = ["XS", "S", "M", "L", "XL", "2XL", "3XL"] as const;
+/**
+ * "No restriction" is a real, selectable option here — not the absence of an
+ * answer — because catering needs a headcount for everyone, not just people
+ * with a restriction. "Other" is paired with a required free-text field
+ * below (dietOther) rather than removed like levelOfStudy's was: a fixed
+ * list genuinely can't cover every real allergy, and for actual catering,
+ * knowing *what* "Other" means matters more than closing a loophole.
+ */
+export const DIETS = [
+  "No restriction",
+  "Vegetarian",
+  "Vegan",
+  "Halal",
+  "Kosher",
+  "Gluten-Free",
+  "Other",
+] as const;
 
 /**
  * An optional field constrained to one of `options`, treating an empty
@@ -180,6 +197,14 @@ export const applicationSchema = z.object({
       return end >= new Date();
     }, "That date is in the past"),
   shirtSize: z.enum(SHIRT_SIZES, { error: "Required" }),
+  diet: z.enum(DIETS, { error: "Required" }),
+  /** Only meaningful when diet === "Other" — enforced below, not here, since it needs the other field's value too. */
+  dietOther: z
+    .string()
+    .trim()
+    .max(200)
+    .optional()
+    .transform((v) => (v ? v : undefined)),
 
   // ---- step 4: experience ----
   // A bare min(1) let a one-character non-answer through. 100 characters is
@@ -217,6 +242,12 @@ export const applicationSchema = z.object({
   }),
   /** Genuinely optional — MLH marketing email is opt-in. */
   agreedMarketing: z.boolean(),
+}).superRefine((data, ctx) => {
+  // Cross-field: can't express "dietOther is required, but only when diet
+  // is 'Other'" on either field alone, since each needs the other's value.
+  if (data.diet === "Other" && !data.dietOther) {
+    ctx.addIssue({ code: "custom", path: ["dietOther"], message: "Tell us what to prepare for" });
+  }
 });
 
 /**
@@ -242,7 +273,7 @@ export type ApplicationValues = z.output<typeof applicationSchema>;
 export const STEP_FIELDS = {
   1: ["firstName", "lastName", "email", "phone"],
   2: ["dateOfBirth", "country", "levelOfStudy", "gender", "raceEthnicity"],
-  3: ["school", "schoolSource", "major", "graduation", "shirtSize"],
+  3: ["school", "schoolSource", "major", "graduation", "shirtSize", "diet", "dietOther"],
   4: ["whyAttend", "whatBuild", "quirkFact", "gitHub", "linkedIn"],
   5: ["agreedCodeOfConduct", "agreedDataSharing", "agreedMarketing"],
 } as const satisfies Record<number, readonly (keyof ApplicationInput)[]>;

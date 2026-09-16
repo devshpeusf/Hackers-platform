@@ -59,7 +59,7 @@ export default function SchoolPicker({
   onChange,
   allowManualEntry = false,
   id,
-  placeholder = "Start typing your school…",
+  placeholder = "Start typing your school (acronyms work)…",
   className,
 }: SchoolPickerProps) {
   const generatedId = useId();

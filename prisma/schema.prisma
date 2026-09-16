@@ -104,9 +104,13 @@ model Application {
   whatBuild String @db.Text
   quirkFact String @db.Text
 
-  /// Meal preference is collected post-acceptance on the dashboard, not on the
-  /// application, so this is nullable.
-  diet         String?
+  /// Collected during the application itself (decided over the earlier
+  /// "post-acceptance dashboard" plan — the dashboard is still 100%
+  /// placeholder UI, so this is the actual first real question either way).
+  /// "No restriction" is a real selectable option, not the absence of an
+  /// answer, so this is required rather than nullable — catering needs a
+  /// headcount for everyone, not just people with a restriction.
+  diet String
 
   /// MLH consent. The first two are required by MLH and enforced in the Zod
   /// schema; marketing is opt-in. agreementsAt matters because MLH versions

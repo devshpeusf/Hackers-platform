@@ -19,6 +19,7 @@ import {
   GENDERS,
   RACES,
   SHIRT_SIZES,
+  DIETS,
   type ApplicationInput,
 } from "@/lib/application-schema";
 import { submitApplication, type SubmitResult } from "./actions";
@@ -456,12 +457,16 @@ function Wizard({
           className="pixel-card flex flex-1 flex-col gap-8 px-7 py-7 sm:flex-row sm:gap-9"
           style={{ "--pc-border": current.accent } as React.CSSProperties}
         >
-          <div className="w-full shrink-0 sm:w-[196px]">
-            <div className="mb-2.5 font-pixel text-[9px]" style={{ color: current.accent }}>
+          {/* self-start: without a blurb, this is just a small number+label —
+              letting it stretch to match the fields column's height (the flex
+              row's default) left a tall empty box under it. Width fixed
+              (rather than auto) so it doesn't shift slightly step to step as
+              the label text changes length. */}
+          <div className="flex w-full shrink-0 items-baseline gap-2.5 self-start sm:w-[110px] sm:flex-col sm:items-start sm:gap-2.5">
+            <div className="font-pixel text-[9px]" style={{ color: current.accent }}>
               {current.number}
             </div>
-            <div className="mb-2.5 text-[13px] font-bold tracking-wide">{current.label}</div>
-            <div className="text-xs leading-[1.65] text-text-muted">{current.blurb}</div>
+            <div className="text-[13px] font-bold tracking-wide">{current.label}</div>
           </div>
 
           <div className="flex flex-1 flex-col gap-[19px]">
@@ -719,6 +724,25 @@ function StepFields({
             </select>
             <FieldError msg={errors.shirtSize} />
           </div>
+        </div>
+        <div className="flex flex-col gap-[18px] sm:flex-row">
+          <div className="flex-1">
+            <Label>Dietary Restriction</Label>
+            <select {...f("diet")}>
+              <option value="">Select…</option>
+              {DIETS.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+            <FieldError msg={errors.diet} />
+          </div>
+          {answers.diet === "Other" && (
+            <div className="flex-1">
+              <Label>Tell us what to prepare for</Label>
+              <input {...f("dietOther")} placeholder="e.g. shellfish allergy" />
+              <FieldError msg={errors.dietOther} />
+            </div>
+          )}
         </div>
       </>
     );
