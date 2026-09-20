@@ -205,11 +205,9 @@ export const boostedSchools = [
  * MLH registration is a SEPARATE thing that happens in OrganizerHQ — this app
  * never owns it (see CLAUDE.md). Applying here does not register anyone with
  * MLH, so we have to say so plainly or people will assume one covers the other.
- *
- * The URL is issued per-event by MLH; fill it in once HackJam's is confirmed.
  */
 export const mlhRegistration = {
-  url: "[MLH_REGISTRATION_URL]",
+  url: "https://events.mlh.com/events/14412-hackjam-26?intent=register",
   heading: "ONE MORE THING",
   body: "Applying here doesn't register you with MLH. Every hacker has to register with MLH separately before the event — it only takes a minute, and you can do it now.",
   cta: "REGISTER WITH MLH",
