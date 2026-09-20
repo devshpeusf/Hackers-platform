@@ -30,9 +30,12 @@ export const COUNTRIES = ["United States", "Canada", "Mexico", "India", "Other"]
  * actually blocks a working professional from having a truthful answer to
  * pick, rather than trying to verify employment status some other way.
  */
+// "Undergraduate University (2 year)" read as if a university offered a
+// 2-year track, when the actual distinction being drawn is community
+// college vs. university — naming it directly instead of implying it.
 export const LEVELS_OF_STUDY = [
-  "Undergraduate University (3+ year)",
-  "Undergraduate University (2 year)",
+  "Undergraduate University (4-year)",
+  "Community College (2-year)",
   "Graduate University (Masters, Doctoral, etc)",
   "High School",
   "Code School / Bootcamp",

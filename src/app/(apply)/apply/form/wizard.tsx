@@ -254,6 +254,83 @@ function GraduationField({
   );
 }
 
+/**
+ * The resume picker: click-to-browse (the label/input pair, same pattern as
+ * before) plus drag-and-drop onto the same box. Both paths run through one
+ * `handleFile` so a dropped file gets exactly the same client-side
+ * PDF/5MB check as a browsed one — dropping doesn't get to skip it.
+ */
+function ResumeField({
+  resumeFile,
+  resumeError,
+  onResumeSelect,
+}: {
+  resumeFile: File | null;
+  resumeError: string | null;
+  onResumeSelect: (file: File | null, error: string | null) => void;
+}) {
+  const [dragActive, setDragActive] = useState(false);
+
+  function handleFile(file: File | null) {
+    if (!file) return;
+    const err = validateResumeFile(file);
+    onResumeSelect(err ? null : file, err);
+  }
+
+  return (
+    <div>
+      <Label>Resume</Label>
+      <div
+        onDragOver={(e) => {
+          e.preventDefault(); // required or the browser rejects the drop entirely
+          setDragActive(true);
+        }}
+        onDragLeave={() => setDragActive(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragActive(false);
+          handleFile(e.dataTransfer.files?.[0] ?? null);
+        }}
+        className={clsx(
+          "flex items-center gap-3.5 border border-dashed bg-surface-bg/60 px-3.5 py-3.5 transition-colors",
+          resumeError
+            ? "border-terminal-red"
+            : dragActive
+              ? "border-accent-teal bg-accent-teal/10"
+              : "border-text-primary/20",
+        )}
+      >
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-pink-light)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+          <path d="M14 3v5h5" />
+          <path d="M6 3h8l5 5v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
+        </svg>
+        <span className="flex-1 truncate text-xs text-text-dim">
+          {dragActive
+            ? "Drop it"
+            : resumeFile
+              ? resumeFile.name
+              : "PDF, max 5MB — shared with sponsors, or drag one here"}
+        </span>
+        <label className="pixel-btn-outline shrink-0 cursor-pointer bg-surface-bg px-4 py-2.5 font-body text-[10px] font-bold tracking-wide">
+          {resumeFile ? "CHANGE FILE" : "CHOOSE FILE"}
+          <input
+            type="file"
+            accept="application/pdf"
+            className="sr-only"
+            onChange={(e) => {
+              const file = e.target.files?.[0] ?? null;
+              // Reset so picking the exact same file again still fires onChange.
+              e.target.value = "";
+              handleFile(file);
+            }}
+          />
+        </label>
+      </div>
+      <FieldError msg={resumeError ?? undefined} />
+    </div>
+  );
+}
+
 function FieldError({ msg }: { msg?: string }) {
   if (!msg) return null;
   return (
@@ -776,40 +853,7 @@ function StepFields({
             <FieldError msg={errors.linkedIn} />
           </div>
         </div>
-        <div>
-          <Label>Resume</Label>
-          <div
-            className={clsx(
-              "flex items-center gap-3.5 border border-dashed bg-surface-bg/60 px-3.5 py-3.5",
-              resumeError ? "border-terminal-red" : "border-text-primary/20",
-            )}
-          >
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-pink-light)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-              <path d="M14 3v5h5" />
-              <path d="M6 3h8l5 5v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
-            </svg>
-            <span className="flex-1 truncate text-xs text-text-dim">
-              {resumeFile ? resumeFile.name : "PDF, max 5MB — shared with sponsors"}
-            </span>
-            <label className="pixel-btn-outline shrink-0 cursor-pointer bg-surface-bg px-4 py-2.5 font-body text-[10px] font-bold tracking-wide">
-              {resumeFile ? "CHANGE FILE" : "CHOOSE FILE"}
-              <input
-                type="file"
-                accept="application/pdf"
-                className="sr-only"
-                onChange={(e) => {
-                  const file = e.target.files?.[0] ?? null;
-                  // Reset so picking the exact same file again still fires onChange.
-                  e.target.value = "";
-                  if (!file) return;
-                  const err = validateResumeFile(file);
-                  onResumeSelect(err ? null : file, err);
-                }}
-              />
-            </label>
-          </div>
-          <FieldError msg={resumeError ?? undefined} />
-        </div>
+        <ResumeField resumeFile={resumeFile} resumeError={resumeError} onResumeSelect={onResumeSelect} />
       </>
     );
   }
