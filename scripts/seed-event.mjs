@@ -19,6 +19,10 @@ import { Client } from "pg";
 const NAME = "HackJam '26";
 const START = "2026-11-07T09:00:00Z";
 const END = "2026-11-08T18:00:00Z";
+// Same link as placeholder-data.ts's mlhRegistration.url — the confirmation
+// email reads this from the event row instead, so a future event doesn't
+// inherit this one's link the way a hardcoded string would.
+const ORGANIZER_HQ_URL = "https://events.mlh.com/events/14412-hackjam-26?intent=register";
 
 const db = new Client({ connectionString: process.env.DIRECT_URL });
 await db.connect();
@@ -29,8 +33,8 @@ if (existing.rowCount) {
 } else {
   const id = crypto.randomUUID();
   await db.query(
-    'insert into "Event" (id, name, "startDate", "endDate") values ($1, $2, $3, $4)',
-    [id, NAME, START, END],
+    'insert into "Event" (id, name, "startDate", "endDate", "organizerHqUrl") values ($1, $2, $3, $4, $5)',
+    [id, NAME, START, END, ORGANIZER_HQ_URL],
   );
   console.log(`seeded: ${NAME} (${id})`);
 }

@@ -84,10 +84,11 @@ export async function submitApplication(
   // so it's folded in here rather than given its own place in the schema.
   const diet = v.diet === "Other" ? `Other: ${v.dietOther}` : v.diet;
 
+  let application: { id: string };
   try {
     // 5. Person, Resume, and Application together — a Person with no
     //    Application is a half-finished record nobody would ever clean up.
-    await prisma.$transaction(async (tx) => {
+    application = await prisma.$transaction(async (tx) => {
       const person = await tx.person.upsert({
         where: { discordId: identity.discordId },
         // Returning applicants get their details refreshed rather than
@@ -117,7 +118,7 @@ export async function submitApplication(
         create: { personId: person.id, fileName: resume.fileName, storageKey: resume.storageKey },
       });
 
-      await tx.application.create({
+      return tx.application.create({
         data: {
           personId: person.id,
           eventId: event.id,
@@ -147,10 +148,9 @@ export async function submitApplication(
           agreedMarketing: v.agreedMarketing,
           agreementsAt: new Date(),
         },
+        select: { id: true },
       });
     });
-
-    return { ok: true };
   } catch (e) {
     // @@unique([personId, eventId]) does the duplicate check for us — cheaper
     // and race-free compared to reading first and then writing (PLAT-25).
@@ -160,4 +160,23 @@ export async function submitApplication(
     console.error("[submitApplication]", e);
     return { ok: false, error: "unknown" };
   }
+
+  // 6. Queue the confirmation email rather than sending it directly. Resend's
+  //    free-tier plan caps at 100 sends/day — a launch-day spike over that
+  //    would mean silently dropped emails if we sent inline here, and each
+  //    one carries the MLH registration link. A cron-triggered route works
+  //    through this queue instead (src/app/api/jobs/send-queued).
+  //
+  //    Own try/catch, same reasoning as the direct-send version this
+  //    replaces: the application is already saved by this point, and a
+  //    failure to queue must not turn into a failed submission.
+  try {
+    await prisma.emailQueue.create({
+      data: { applicationId: application.id, emailType: "CONFIRMATION" },
+    });
+  } catch (e) {
+    console.error("[submitApplication] failed to queue confirmation email", e);
+  }
+
+  return { ok: true };
 }
