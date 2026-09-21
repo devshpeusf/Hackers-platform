@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getSiteOrigin } from "@/lib/site-url";
 
 /**
  * Starts Discord OAuth.
@@ -14,7 +15,7 @@ import { createClient } from "@/lib/supabase/server";
  */
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
-  const { origin } = new URL(request.url);
+  const origin = getSiteOrigin(request);
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "discord",

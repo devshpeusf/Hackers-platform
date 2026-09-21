@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { getSiteOrigin } from "@/lib/site-url";
 
 /** Routes that require a signed-in applicant. */
 const PROTECTED = ["/apply/form", "/apply/status", "/apply/applied"];
@@ -40,8 +41,10 @@ export async function updateSession(request: NextRequest) {
   if (!user && needsAuth) {
     // Send them back to the landing screen rather than a dead end. Once real
     // sign-in works this is what stops someone deep-linking into the form.
-    const url = request.nextUrl.clone();
-    url.pathname = "/apply";
+    // Built from the public origin, not nextUrl: behind Vercel's proxy
+    // nextUrl carries the deployment host, which would bounce the
+    // visitor off the custom domain.
+    const url = new URL("/apply", getSiteOrigin(request));
     url.searchParams.set("signin", "required");
     return NextResponse.redirect(url);
   }
