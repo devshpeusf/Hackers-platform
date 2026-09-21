@@ -14,6 +14,26 @@ const PROTECTED = ["/apply/form", "/apply/status", "/apply/applied"];
  * getUser — anything that returns early there skips the refresh.
  */
 export async function updateSession(request: NextRequest) {
+  // Vercel always serves the *.vercel.app deployment domain and it can't be
+  // turned off, so someone can land on it instead of the real one. That's not
+  // just cosmetic: OAuth starts by setting a PKCE cookie on whatever host you
+  // began on, and the callback always returns to the canonical host. Different
+  // host, no cookie, the code exchange fails — and you get bounced back to
+  // /apply looking like sign-in silently did nothing.
+  //
+  // Only in production: preview deployments legitimately have their own host,
+  // and NEXT_PUBLIC_SITE_URL is scoped to production so they fall through to
+  // their own forwarded host.
+  const canonical = process.env.NEXT_PUBLIC_SITE_URL;
+  if (canonical && process.env.VERCEL_ENV === "production") {
+    const host = request.headers.get("x-forwarded-host");
+    const canonicalHost = new URL(canonical).host;
+    if (host && host !== canonicalHost) {
+      const target = new URL(request.nextUrl.pathname + request.nextUrl.search, canonical);
+      return NextResponse.redirect(target, 308);
+    }
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
