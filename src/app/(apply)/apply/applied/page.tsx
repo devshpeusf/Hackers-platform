@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { toApplicantIdentity } from "@/lib/supabase/user";
 import { hasApplied } from "@/lib/applications";
+import { getOpenEvent } from "@/lib/events";
 import AlreadyApplied from "../../_already-applied";
 
 /**
@@ -13,7 +14,9 @@ import AlreadyApplied from "../../_already-applied";
  * MLH registration they still owe.
  *
  * Anyone who hasn't applied is sent to the form instead, so the URL can't be
- * used to skip it.
+ * used to skip it. Same "no open event" fallthrough as /apply/form: with
+ * nothing currently open, there's no event to have applied to, so this
+ * sends them to the form rather than assert something that isn't true.
  */
 export default async function AlreadyAppliedPage() {
   const supabase = await createClient();
@@ -24,7 +27,11 @@ export default async function AlreadyAppliedPage() {
   if (!user) redirect("/apply?signin=required");
 
   const identity = toApplicantIdentity(user);
-  if (!(await hasApplied(identity.discordId))) redirect("/apply/form");
+
+  const event = await getOpenEvent();
+  if (!event || !(await hasApplied(identity.discordId, event.id))) {
+    redirect("/apply/form");
+  }
 
   return <AlreadyApplied username={identity.username} />;
 }

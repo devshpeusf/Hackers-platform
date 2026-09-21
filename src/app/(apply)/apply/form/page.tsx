@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { toApplicantIdentity } from "@/lib/supabase/user";
 import { hasApplied } from "@/lib/applications";
+import { getOpenEvent } from "@/lib/events";
 import ApplicationWizard from "./wizard";
 
 /**
@@ -26,10 +27,19 @@ export default async function ApplyFormPage() {
 
   const identity = toApplicantIdentity(user);
 
-  // Someone who has already applied gets sent straight to their application.
-  // Without this they'd be handed a blank five-step form and only discover at
-  // SUBMIT that it was never needed — the unique constraint would reject it.
-  if (await hasApplied(identity.discordId)) redirect("/apply/applied");
+  // Someone who has already applied *to the event currently open* gets sent
+  // straight to their application. Without this they'd be handed a blank
+  // five-step form and only discover at SUBMIT that it was never needed —
+  // the unique constraint would reject it.
+  //
+  // If nothing is currently open there's nothing to have applied to yet —
+  // fall through to the wizard rather than block on a past event's
+  // application. The wizard's own submit path already handles "applications
+  // closed" as its own screen.
+  const event = await getOpenEvent();
+  if (event && (await hasApplied(identity.discordId, event.id))) {
+    redirect("/apply/applied");
+  }
 
   return <ApplicationWizard identity={identity} />;
 }
