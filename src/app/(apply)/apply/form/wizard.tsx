@@ -348,6 +348,33 @@ function FieldError({ msg }: { msg?: string }) {
  * The asterisk carries an aria-label because a bare "*" is announced as
  * "star" or skipped entirely by screen readers.
  */
+/**
+ * Account line: who you're signed in as, and the way out.
+ *
+ * Extracted because it has to appear twice — the desktop rail and the mobile
+ * bar — and sign-out being reachable is not something to leave to a duplicate.
+ */
+function AccountLine({ username, className }: { username: string; className?: string }) {
+  return (
+    <div
+      className={clsx(
+        "flex items-center gap-2 text-[10px] tracking-wide text-text-faintest",
+        className,
+      )}
+    >
+      <span className="truncate uppercase">{username}</span>
+      <form action="/auth/signout" method="post" className="ml-auto shrink-0">
+        <button
+          type="submit"
+          className="px-1 py-2 text-[10px] uppercase tracking-wide hover:text-accent-pink"
+        >
+          Sign out
+        </button>
+      </form>
+    </div>
+  );
+}
+
 function Label({
   children,
   optional,
@@ -487,26 +514,34 @@ function Wizard({
           height={69}
           className="mb-4 h-auto w-[150px] opacity-[0.82]"
         />
-        <div className="flex items-center gap-2 text-[10px] tracking-wide text-text-faintest">
-          <span className="truncate uppercase">{identity.username}</span>
-          <form action="/auth/signout" method="post" className="ml-auto shrink-0">
-            <button type="submit" className="text-[10px] uppercase tracking-wide hover:text-accent-pink">
-              Sign out
-            </button>
-          </form>
-        </div>
+        <AccountLine username={identity.username} />
       </aside>
+
+      {/*
+        The rail is hidden below md, and it held the only sign-out in the app.
+        This bar restores it, plus the wordmark for context.
+      */}
+      <div className="flex items-center gap-3 border-b-4 border-border-default bg-surface-sidebar px-5 py-3 md:hidden">
+        <Image
+          src="/hackjam26-words.png"
+          alt="HackJam '26"
+          width={380}
+          height={85}
+          className="h-auto w-[104px] shrink-0 [image-rendering:pixelated]"
+        />
+        <AccountLine username={identity.username} className="ml-auto w-auto" />
+      </div>
 
       <main className="flex flex-1 flex-col px-6 py-8 md:px-11 md:py-9">
         {/* header: heading, progress blocks, altitude readout */}
-        <div className="mb-5 flex items-end justify-between gap-6">
-          <div>
+        <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
+          <div className="min-w-0">
             <h1 className="mb-3.5 font-pixel text-lg md:text-xl">{current.heading}</h1>
             <div className="flex gap-1.5">
               {applicationSteps.map((s, i) => (
                 <div
                   key={s.number}
-                  className="h-2.5 w-10 md:w-[62px]"
+                  className="h-2.5 flex-1 sm:w-[62px] sm:flex-none"
                   style={{
                     background: i + 1 <= step ? s.accent : "var(--color-border-default)",
                     boxShadow: i + 1 <= step ? `0 0 10px ${s.accent}` : undefined,
@@ -515,16 +550,36 @@ function Wizard({
               ))}
             </div>
           </div>
-          <div className="shrink-0 text-right">
-            <div className="mb-1.5 flex items-baseline justify-end gap-2">
-              <span className="font-pixel text-[7px] tracking-[0.12em] text-text-faintest">ALT</span>
-              <span className="font-pixel text-[15px]" style={{ color: current.accent }}>
-                {current.altitude}
-              </span>
-              <span className="font-pixel text-[7px] tracking-[0.12em] text-text-faintest">KM</span>
-            </div>
-            <div className="font-pixel text-[8px] tracking-[0.12em] text-text-dim">
-              STEP {step} / {LAST_STEP}
+          <div className="flex shrink-0 items-center gap-3">
+            {/*
+              The rail — and with it the Earth and the zone name — is hidden
+              below md, so mobile kept only a bare altitude number and lost the
+              descent motif. This brings both back, sized to sit beside it.
+            */}
+            <Image
+              src="/earth.webp"
+              alt=""
+              width={120}
+              height={120}
+              unoptimized
+              style={{ width: Math.round(current.earthPx * 0.38), height: "auto" }}
+              className="shrink-0 [image-rendering:pixelated] md:hidden"
+            />
+
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 sm:block sm:text-right">
+              <div className="flex items-baseline gap-2 sm:mb-1.5 sm:justify-end">
+                <span className="font-pixel text-[7px] tracking-[0.12em] text-text-faintest">ALT</span>
+                <span className="font-pixel text-[15px]" style={{ color: current.accent }}>
+                  {current.altitude}
+                </span>
+                <span className="font-pixel text-[7px] tracking-[0.12em] text-text-faintest">KM</span>
+              </div>
+              <div className="font-pixel text-[8px] tracking-[0.12em] text-text-dim">
+                STEP {step} / {LAST_STEP}
+              </div>
+              <div className="mt-1.5 font-pixel text-[7px] tracking-[0.12em] text-text-faintest md:hidden">
+                {current.zone}
+              </div>
             </div>
           </div>
         </div>

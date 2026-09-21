@@ -40,6 +40,18 @@
   --font-body: var(--font-space-mono), monospace;
 }
 
+html {
+  /*
+   * Belt and braces against sideways scroll on phones. The real fix is always
+   * to stop the offending element being too wide — this only stops one
+   * mistake becoming a page that slides around under your thumb.
+   *
+   * `clip` rather than `hidden`: `hidden` turns the element into a scroll
+   * container, which silently breaks `position: sticky` on descendants.
+   */
+  overflow-x: clip;
+}
+
 body {
   background-color: var(--color-surface-bg);
   color: var(--color-text-primary);
@@ -130,6 +142,46 @@ body {
   }
   .clickable:hover {
     transform: translateY(-3px);
+  }
+
+  /*
+   * Touch-target floor. The mockup sizes buttons at roughly 37px tall, which
+   * is right on a pointer but under the 44px minimum a finger needs — and
+   * these are NEXT / BACK / SUBMIT, the most-tapped controls in the funnel.
+   *
+   * Scoped to `pointer: coarse` rather than a width breakpoint: a tablet in
+   * landscape is a wide screen that still needs big targets, and a narrow
+   * desktop window is a small screen that doesn't. The desktop look is
+   * unchanged.
+   *
+   * inline-flex + centring so the extra height pads around the label instead
+   * of pushing it off-centre — several call sites set only the class and
+   * their own padding.
+   */
+  @media (pointer: coarse) {
+    .pixel-btn-solid,
+    .pixel-btn-outline {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+    }
+
+    /*
+     * Same floor for the other two things a finger has to hit: rows in the
+     * school typeahead, and the consent checkboxes — whose 16px box is far
+     * under the floor, though the whole label is clickable.
+     */
+    [role="option"] {
+      display: flex;
+      align-items: center;
+      min-height: 44px;
+    }
+
+    input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+    }
   }
 
   .pixel-btn-solid,

@@ -58,9 +58,12 @@ export default function ApplyLandingPage() {
 
         <Link
           href="/auth/signin"
-          className="pixel-btn-solid inline-flex items-center justify-center gap-3 px-9 py-[18px] font-body text-sm font-bold tracking-wide text-surface-bg"
+          className="pixel-btn-solid inline-flex items-center justify-center gap-2.5 px-5 py-3 font-body text-xs font-bold tracking-wide text-surface-bg sm:gap-3 sm:px-9 sm:py-[18px] sm:text-sm"
         >
-          <DiscordIcon size={20} />
+          {/* Sized down on phones — at the desktop size this ran nearly edge to
+              edge on a 320px screen. The touch floor in globals.css still holds
+              it at 44px tall. CSS classes override the width/height attrs. */}
+          <DiscordIcon size={20} className="h-[18px] w-[18px] sm:h-5 sm:w-5" />
           SIGN IN WITH DISCORD
         </Link>
       </div>
