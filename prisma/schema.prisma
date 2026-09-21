@@ -28,6 +28,13 @@ model Person {
   /// again with a different email would become a second Person.
   discordId String @unique
 
+  /// Everyone who signs in is an APPLICANT by default. There's no
+  /// self-serve path to ORGANIZER — it's set by hand in the DB for the
+  /// people running the event. This is the seed for the full organizer
+  /// dashboard on the roadmap (see CLAUDE.md); the email queue admin page
+  /// is the first thing that reads it.
+  role PersonRole @default(APPLICANT)
+
   firstName String
   lastName  String
   email     String  @unique
@@ -47,6 +54,12 @@ model Event {
   name      String
   startDate DateTime
   endDate   DateTime
+
+  /// Where the confirmation email sends applicants to complete MLH
+  /// registration (a separate, required step this app never owns — see
+  /// CLAUDE.md). Read at send time rather than hardcoded so a future event
+  /// doesn't inherit this one's link.
+  organizerHqUrl String
 
   // One event can have many applications
   applications Application[]
@@ -124,8 +137,66 @@ model Application {
   linkedIn  String?
   portfolio String?
 
+  // Every application can have queued emails (confirmation now, more types
+  // later — see EmailQueue below).
+  emailQueue EmailQueue[]
+
   // Every person can only submit one application to each event
   @@unique([personId, eventId])
+}
+
+/// A send queue for transactional email, so a Resend failure — or hitting
+/// the free-tier 100/day cap on launch day — can't silently drop an email.
+/// submitApplication inserts a PENDING row instead of sending directly; a
+/// cron-triggered route (src/app/api/jobs/send-queued) works through it.
+/// See that route for the claim/retry/quota-handling logic.
+model EmailQueue {
+  id        String    @id @default(cuid())
+  createdAt DateTime  @default(now())
+  sentAt    DateTime?
+
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id])
+
+  emailType EmailType
+  status    EmailStatus @default(PENDING)
+
+  /// Real send attempts only — a Resend rate-limit/quota response doesn't
+  /// increment this (it isn't the email's fault, see the send route), so
+  /// this stays an honest count of "times we actually tried and it failed."
+  attempts  Int     @default(0)
+  lastError String?
+
+  /// Same email can't be queued twice for the same application — a retried
+  /// submitApplication call (or a future re-queue action) upserts instead
+  /// of duplicating.
+  @@unique([applicationId, emailType])
+  /// What the send route and admin page both query by: oldest PENDING
+  /// first, and the status breakdown/list.
+  @@index([status, createdAt])
+}
+
+enum EmailType {
+  CONFIRMATION
+}
+
+enum EmailStatus {
+  PENDING
+  /// Transient: a row sits here only for the length of one send attempt,
+  /// set by the send route's atomic claim (see that file) so two
+  /// overlapping invocations can't pick up and send the same row twice.
+  /// Not in the original spec's three-value list — added because the
+  /// "claim before sending, idempotent under overlap" requirement needs a
+  /// real state to claim INTO; PENDING/SENT/FAILED alone can't express
+  /// "another worker already has this one."
+  SENDING
+  SENT
+  FAILED
+}
+
+enum PersonRole {
+  APPLICANT
+  ORGANIZER
 }
 
 // Possible application statuses
