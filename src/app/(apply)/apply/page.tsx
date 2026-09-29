@@ -1,5 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { toApplicantIdentity } from "@/lib/supabase/user";
+import { hasApplied } from "@/lib/applications";
 import clsx from "@/lib/clsx";
 import DiscordIcon from "@/components/ui/DiscordIcon";
 import { applicationCopy } from "@/lib/placeholder-data";
@@ -18,7 +22,25 @@ import { STARFIELD, Dots } from "../_shared";
  * Discord OAuth URL server-side and redirects to it — so sign-in is a plain
  * navigation with no client JavaScript involved at all.
  */
-export default function ApplyLandingPage() {
+export default async function ApplyLandingPage() {
+  // This is where everyone arrives — "Register Now" on hackjam26.com, a
+  // bookmark, or just the domain. Without this check someone who had already
+  // applied was shown "LET'S GET YOU SIGNED UP" and had to sign in again,
+  // while signed in, to find out they were done.
+  //
+  // Reading the session makes this route dynamic, which is the cost. It is
+  // worth it: a page whose only purpose is signing you in has nothing to say
+  // to someone already signed in.
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    const identity = toApplicantIdentity(user);
+    redirect((await hasApplied(identity.discordId)) ? "/apply/applied" : "/apply/form");
+  }
+
   return (
     <div className={clsx("flex min-h-screen flex-col px-6 py-6 md:px-11 md:py-9", STARFIELD)}>
       <div className="flex items-center gap-2.5 border-b border-text-primary/7 pb-4 text-[11px] text-text-faintest">
