@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import clsx from "@/lib/clsx";
 import { STARFIELD } from "../../_shared";
-import AlreadyApplied, { ResultScreen } from "../../_already-applied";
+import SubmittedScreen, { ResultScreen } from "../../_submitted-screen";
 import type { ApplicantIdentity } from "@/lib/supabase/user";
 import { createClient } from "@/lib/supabase/client";
 import { uploadResume, validateResumeFile } from "@/lib/supabase/storage";
@@ -145,9 +145,9 @@ export default function ApplicationWizard({ identity }: { identity: ApplicantIde
     });
   }
 
-  if (result?.ok) return <Submitted email={answers.email ?? identity.email} />;
+  if (result?.ok) return <SubmittedScreen email={answers.email ?? identity.email} />;
   if (result && !result.ok && result.error === "duplicate") {
-    return <AlreadyApplied username={identity.username} />;
+    return <SubmittedScreen email={answers.email ?? identity.email} />;
   }
   if (result && !result.ok && result.error === "closed") return <ApplicationsClosed />;
 
@@ -974,66 +974,3 @@ function ApplicationsClosed() {
   );
 }
 
-function Submitted({ email }: { email: string | null }) {
-  return (
-    <div className={clsx("flex min-h-screen items-center justify-center px-6 py-10", STARFIELD)}>
-      <div className="terminal-window w-full max-w-[620px]">
-        <div className="terminal-bar flex items-center gap-2.5 px-3.5 py-2.5">
-          <span className="h-2.5 w-2.5 bg-terminal-red" />
-          <span className="h-2.5 w-2.5 bg-terminal-yellow" />
-          <span className="h-2.5 w-2.5 bg-terminal-green" />
-          <span className="ml-1.5 font-pixel text-[8px] text-text-secondary">APPLICATION.LOG</span>
-        </div>
-        <div className="relative px-7 pb-7 pt-8 text-center">
-          <div className="pointer-events-none absolute inset-0 opacity-5 [background:repeating-linear-gradient(to_bottom,#f4f1fb_0_1px,transparent_1px_3px)]" />
-          <div className="mb-4 font-pixel text-[9px] tracking-widest text-accent-teal">// SUBMITTED</div>
-          <h2 className="mb-4 font-pixel text-lg leading-[1.7]">
-            YOU&apos;RE IN
-            <br />
-            THE PILE
-          </h2>
-          <p className="mb-5 text-[13px] leading-[1.8] text-text-muted">
-            We&apos;ll email{" "}
-            <span className="text-accent-teal">{email ?? "the address you gave us"}</span> when
-            decisions go out. Nothing else to do here &mdash; but you still need to register
-            with MLH.
-          </p>
-          <div className="mx-auto mb-6 max-w-[320px] text-left text-xs leading-[2.05] text-text-dim">
-            <div><span className="text-accent-teal">$</span> application --submit <span className="text-terminal-green">OK</span></div>
-            <div><span className="text-accent-teal">$</span> mlh --register <span className="text-terminal-yellow">TODO</span></div>
-            <div><span className="text-accent-teal">$</span> review --status <span className="text-terminal-yellow">PENDING</span></div>
-          </div>
-          <div className="mx-auto mb-6 max-w-[420px] border-l-[3px] border-accent-amber bg-accent-amber/6 px-4 py-3 text-left">
-            <div className="mb-1.5 font-pixel text-[8px] tracking-widest text-accent-amber">
-              {mlhRegistration.heading}
-            </div>
-            <p className="text-[11px] leading-[1.7] text-text-muted">{mlhRegistration.body}</p>
-            <a
-              href={mlhRegistration.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2 inline-block text-[11px] font-bold text-accent-amber"
-            >
-              {mlhRegistration.cta} &rarr;
-            </a>
-          </div>
-
-          <div className="flex flex-wrap justify-center gap-3.5">
-            <Link
-              href="/apply/status"
-              className="pixel-btn-solid px-[22px] py-[11px] font-body text-[11px] font-bold tracking-wide text-surface-bg"
-            >
-              VIEW MY APPLICATION &rarr;
-            </Link>
-            <Link
-              href="/apply"
-              className="pixel-btn-outline bg-surface-bg px-[22px] py-[11px] font-body text-[11px] font-bold tracking-wide text-text-primary"
-            >
-              REPLAY FLOW
-            </Link>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
