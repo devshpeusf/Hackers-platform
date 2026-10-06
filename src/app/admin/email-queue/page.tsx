@@ -1,9 +1,6 @@
-import { redirect, notFound } from "next/navigation";
 import clsx from "@/lib/clsx";
 import { prisma } from "@/lib/prisma";
-import { createClient } from "@/lib/supabase/server";
-import { toApplicantIdentity } from "@/lib/supabase/user";
-import { isOrganizer } from "@/lib/organizer";
+import { requireOrganizer } from "@/lib/organizer";
 import PixelCard from "@/components/ui/PixelCard";
 import PixelChip from "@/components/ui/PixelChip";
 import { resetEmailQueueRow } from "./actions";
@@ -13,22 +10,12 @@ import { resetEmailQueueRow } from "./actions";
  * counts by status, and every FAILED row with enough to act on it. Not
  * linked from anywhere in the app's own nav; organizers reach it by URL.
  *
- * Organizer-only. Not signed in -> straight to sign-in; signed in but not
- * an organizer -> a plain 404, so the page doesn't confirm its own
- * existence (or that applicant PII lives behind it) to someone poking at
- * the URL. After signing in there's no return-to-this-page redirect —
- * deliberately skipped for a page only organizers open, by URL, now and
- * then; they just navigate back here.
+ * Organizer-only (see requireOrganizer). After signing in there's no
+ * return-to-this-page redirect — deliberately skipped for a page only
+ * organizers open, by URL, now and then; they just navigate back here.
  */
 export default async function EmailQueuePage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/auth/signin");
-
-  const identity = toApplicantIdentity(user);
-  if (!(await isOrganizer(identity.discordId))) notFound();
+  await requireOrganizer();
 
   const [counts, failedRows] = await Promise.all([
     prisma.emailQueue.groupBy({ by: ["status"], _count: { status: true } }),
