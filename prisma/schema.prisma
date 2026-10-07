@@ -178,6 +178,11 @@ model EmailQueue {
 
 enum EmailType {
   CONFIRMATION
+  /// Decision emails. Templates exist (emails/); nothing queues these yet —
+  /// that belongs to the decision-marking work.
+  ACCEPTED
+  WAITLISTED
+  REJECTED
 }
 
 enum EmailStatus {

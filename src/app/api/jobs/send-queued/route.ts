@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 import ConfirmationEmail from "@emails/ConfirmationEmail";
+import AcceptedEmail from "@emails/AcceptedEmail";
+import WaitlistedEmail from "@emails/WaitlistedEmail";
+import RejectedEmail from "@emails/RejectedEmail";
 import type { EmailType } from "@/generated/prisma/client";
 
 /**
@@ -129,26 +132,60 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * One dispatch point per EmailType — CONFIRMATION is the only one that
- * exists today, but the queue/claim/retry machinery above is generic, so
- * adding a second type later (a reminder, a decision email) is just another
- * case here and another value in the enum, not a second queue or route.
+ * One dispatch point per EmailType. The queue/claim/retry machinery above is
+ * generic, so a new type is just another case here and another value in the
+ * enum, not a second queue or route.
  */
 type ApplicationWithRelations = {
   person: { firstName: string; email: string };
-  event: { organizerHqUrl: string };
+  event: { name: string; organizerHqUrl: string };
 };
 
 async function sendOne(emailType: EmailType, application: ApplicationWithRelations) {
+  const { person, event } = application;
+
   switch (emailType) {
     case "CONFIRMATION":
       await sendEmail({
-        to: application.person.email,
+        to: person.email,
         subject: "You're on the list — HackJam '26",
         react: ConfirmationEmail({
-          firstName: application.person.firstName,
-          organizerHqUrl: application.event.organizerHqUrl,
+          firstName: person.firstName,
+          organizerHqUrl: event.organizerHqUrl,
         }),
+      });
+      return;
+    case "ACCEPTED": {
+      // TODO(rsvp): RSVP isn't built. Until RSVP_URL points at a real RSVP
+      // page, refuse to send — an acceptance with a dead "confirm" button is
+      // worse than one that waits. The row fails visibly on
+      // /admin/email-queue instead of reaching an inbox.
+      const rsvpUrl = process.env.RSVP_URL;
+      if (!rsvpUrl) throw new Error("RSVP_URL is not set — ACCEPTED emails can't go out without an RSVP link");
+      await sendEmail({
+        to: person.email,
+        subject: `You're in — ${event.name}`,
+        react: AcceptedEmail({
+          firstName: person.firstName,
+          eventName: event.name,
+          rsvpUrl,
+          organizerHqUrl: event.organizerHqUrl,
+        }),
+      });
+      return;
+    }
+    case "WAITLISTED":
+      await sendEmail({
+        to: person.email,
+        subject: `You're on the waitlist — ${event.name}`,
+        react: WaitlistedEmail({ firstName: person.firstName, eventName: event.name }),
+      });
+      return;
+    case "REJECTED":
+      await sendEmail({
+        to: person.email,
+        subject: `Your ${event.name} application`,
+        react: RejectedEmail({ firstName: person.firstName, eventName: event.name }),
       });
       return;
     default: {
