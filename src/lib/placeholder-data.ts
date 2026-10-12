@@ -22,10 +22,6 @@ export const navItems: NavItem[] = [
   { id: "help", label: "HELP", href: "/help" },
 ];
 
-export const sidebarUser = {
-  handle: "MREYES · DISCORD ACCOUNT",
-};
-
 export const hacker = {
   firstName: "Mariana",
   lastName: "Reyes",
