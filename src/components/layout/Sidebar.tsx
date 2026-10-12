@@ -4,7 +4,6 @@ import { useState } from "react";
 import Image from "next/image";
 import clsx from "@/lib/clsx";
 import SidebarNav from "./SidebarNav";
-import { sidebarUser } from "@/lib/placeholder-data";
 
 /**
  * The sidebar shell: logo, nav, SHPE USF logo, account line. Desktop
@@ -12,7 +11,7 @@ import { sidebarUser } from "@/lib/placeholder-data";
  * collapses into a slide-in drawer behind a hamburger button, since
  * organizers will use this on phones at the door.
  */
-export default function Sidebar() {
+export default function Sidebar( { accountLabel }: { accountLabel: string}) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -66,7 +65,7 @@ export default function Sidebar() {
           height={27}
           className="mb-5 w-[150px] h-auto opacity-[0.82]"
         />
-        <div className="text-[10px] tracking-wide text-text-faintest">{sidebarUser.handle}</div>
+        <div className="text-[10px] tracking-wide text-text-faintest">{accountLabel}</div>
       </aside>
     </>
   );
