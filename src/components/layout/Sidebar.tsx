@@ -11,7 +11,7 @@ import SidebarNav from "./SidebarNav";
  * collapses into a slide-in drawer behind a hamburger button, since
  * organizers will use this on phones at the door.
  */
-export default function Sidebar( { accountLabel }: { accountLabel: string}) {
+export default function Sidebar({ accountLabel }: { accountLabel: string }) {
   const [open, setOpen] = useState(false);
 
   return (

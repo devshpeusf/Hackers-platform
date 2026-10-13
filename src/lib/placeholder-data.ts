@@ -22,22 +22,6 @@ export const navItems: NavItem[] = [
   { id: "help", label: "HELP", href: "/help" },
 ];
 
-export const hacker = {
-  firstName: "Mariana",
-  lastName: "Reyes",
-  fullName: "Mariana Reyes",
-  greetingName: "Mariana Reyes",
-  email: "mariana@example.com",
-  phone: "[PHONE]",
-  gender: "Woman",
-  shirtSize: "M",
-  school: "University of South Florida",
-  major: "Computer Engineering",
-  graduationDate: "[DATE]",
-  mealPreference: "Vegetarian",
-  passId: "HJ26-0482",
-};
-
 export const dashboardStatus = {
   eventName: "HACKJAM '26",
   headline: "ACCEPTED",
@@ -60,7 +44,6 @@ export const team = {
   noTeamCopy: "Teams of 1–3 hackers. Solo hacking is welcome too.",
   name: "PIXEL PIONEERS",
   inviteCode: "HJ26-7F3K",
-  members: [{ initials: "MR", name: "Mariana Reyes", isYou: true }],
 };
 
 export const guideCards = {

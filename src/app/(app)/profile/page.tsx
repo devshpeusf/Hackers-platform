@@ -2,7 +2,7 @@ import PageHeading from "@/components/ui/PageHeading";
 import PixelCard from "@/components/ui/PixelCard";
 import PixelButton from "@/components/ui/PixelButton";
 import Field from "@/components/ui/Field";
-import { hacker } from "@/lib/placeholder-data";
+import { getCurrentHacker } from "@/lib/current-hacker";
 
 type SectionProps = {
   number: string;
@@ -24,7 +24,8 @@ function ProfileSection({ number, title, description, children }: SectionProps) 
   );
 }
 
-export default function ProfilePage() {
+export default async function ProfilePage() {
+  const { person, application } = await getCurrentHacker();
   return (
     <div>
       <PageHeading title="PROFILE" />
@@ -37,12 +38,12 @@ export default function ProfilePage() {
 
         <ProfileSection number="01" title="BASICS" description="Your name and best contact details.">
           <div className="flex flex-col gap-4.5 sm:flex-row">
-            <Field className="flex-1" label="First Name" value={hacker.firstName} />
-            <Field className="flex-1" label="Last Name" value={hacker.lastName} />
+            <Field className="flex-1" label="First Name" value={person.firstName} />
+            <Field className="flex-1" label="Last Name" value={person.lastName} />
           </div>
           <div className="flex flex-col gap-4.5 sm:flex-row">
-            <Field className="flex-1" label="Email" value={hacker.email} tone="secondary" />
-            <Field className="flex-1" label="Phone" optional value={hacker.phone} tone="secondary" />
+            <Field className="flex-1" label="Email" value={person.email} tone="secondary" />
+            <Field className="flex-1" label="Phone" optional value={person.phoneNum} tone="secondary" />
           </div>
         </ProfileSection>
 
@@ -50,8 +51,8 @@ export default function ProfilePage() {
 
         <ProfileSection number="02" title="ABOUT YOU" description="Shirt size and demographic info.">
           <div className="flex flex-col gap-4.5 sm:flex-row">
-            <Field className="flex-1" label="Gender" optional value={hacker.gender} />
-            <Field className="flex-1" label="Shirt Size" value={hacker.shirtSize} />
+            <Field className="flex-1" label="Gender" optional value={application.gender ?? "Not provided"} />
+            <Field className="flex-1" label="Shirt Size" value={application.shirtSize} />
           </div>
         </ProfileSection>
 
@@ -59,11 +60,11 @@ export default function ProfilePage() {
 
         <ProfileSection number="03" title="ACADEMIC INFO" description="Your school, major, and graduation.">
           <div className="flex flex-col gap-4.5 sm:flex-row">
-            <Field className="flex-1" label="School" value={hacker.school} />
-            <Field className="flex-1" label="Major" value={hacker.major} />
+            <Field className="flex-1" label="School" value={application.school} />
+            <Field className="flex-1" label="Major" value={application.major} />
           </div>
           <div className="flex flex-col gap-4.5 sm:flex-row">
-            <Field className="flex-1" label="Graduation Date" value={hacker.graduationDate} tone="secondary" />
+            <Field className="flex-1" label="Graduation Date" value={application.graduation} tone="secondary" />
             <div className="flex-1" />
           </div>
         </ProfileSection>
