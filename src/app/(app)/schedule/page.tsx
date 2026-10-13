@@ -1,8 +1,10 @@
 import PageHeading from "@/components/ui/PageHeading";
 import TerminalWindow from "@/components/ui/TerminalWindow";
 import { scheduleItems } from "@/lib/placeholder-data";
+import { getCurrentHacker } from "@/lib/current-hacker";
 
-export default function SchedulePage() {
+export default async function SchedulePage() {
+  await getCurrentHacker();
   return (
     <div>
       <PageHeading title="SCHEDULE" />

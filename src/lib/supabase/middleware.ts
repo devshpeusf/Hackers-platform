@@ -3,7 +3,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSiteOrigin } from "@/lib/site-url";
 
 /** Routes that require a signed-in applicant. */
-const PROTECTED = ["/apply/form", "/apply/status", "/apply/applied"];
+const PROTECTED = [
+  "/apply/form", "/apply/status", "/apply/applied",
+  "/dashboard", "/profile", "/team", "/guide", "/schedule", "/help",
+];
 
 /**
  * Refreshes the auth session on every request, and gates the protected routes.
@@ -57,7 +60,9 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const needsAuth = PROTECTED.some((p) => request.nextUrl.pathname.startsWith(p));
+  const needsAuth = PROTECTED.some(
+    (p) => request.nextUrl.pathname === p || request.nextUrl.pathname.startsWith(`${p}/`),
+  );
   if (!user && needsAuth) {
     // Send them back to the landing screen rather than a dead end. Once real
     // sign-in works this is what stops someone deep-linking into the form.

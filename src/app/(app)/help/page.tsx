@@ -2,6 +2,7 @@ import PageHeading from "@/components/ui/PageHeading";
 import TerminalWindow from "@/components/ui/TerminalWindow";
 import Field from "@/components/ui/Field";
 import PixelButton from "@/components/ui/PixelButton";
+import { getCurrentHacker } from "@/lib/current-hacker";
 
 function ChevronDown() {
   return (
@@ -20,7 +21,8 @@ function ChevronDown() {
   );
 }
 
-export default function HelpPage() {
+export default async function HelpPage() {
+  await getCurrentHacker();
   return (
     <div>
       <PageHeading title="HELP / REPORT AN ISSUE" />

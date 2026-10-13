@@ -1,8 +1,10 @@
 import PageHeading from "@/components/ui/PageHeading";
 import PixelCard from "@/components/ui/PixelCard";
 import { guideCards } from "@/lib/placeholder-data";
+import { getCurrentHacker } from "@/lib/current-hacker";
 
-export default function GuidePage() {
+export default async function GuidePage() {
+  await getCurrentHacker();
   return (
     <div>
       <PageHeading title="HACKER GUIDE" />
