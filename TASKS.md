@@ -120,8 +120,11 @@ submit.
 
 ## Phase 5 — QR badge check-in
 
-**No tickets exist.** `QrPlaceholder` encodes nothing; the organizer-side
-scanner isn't designed.
+- [x] Generated badge QR on the dashboard — random opaque token per admitted
+      hacker, own badge only (`src/lib/badge.ts`)
+- [ ] Organizer-side scanner — not designed. It should mark a badge used once
+      and check the hacker's current status at scan time, since a screenshot
+      of a QR can be forwarded and an acceptance can be revoked.
 
 ## Phase 6 — Organizer dashboard + sponsor portal
 

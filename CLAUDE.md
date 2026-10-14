@@ -72,7 +72,6 @@ README.md before touching it again; it's a reference, not code to copy).
 | `PixelButton` | `variant="solid"\|"outline"`. **Does not default padding/font-size** — the mockup sizes every button instance individually (compare SAVE PROFILE CHANGES vs. LEAVE TEAM), so callers pass sizing via `className`. Check an existing page for the right values before inventing new ones. |
 | `Field` | the read-only-looking box used in Profile/Help. Deliberately a styled `<div>`, not a real `<input>` — an early version used a disabled input and it clipped long values instead of wrapping like the mockup. Swap for a real form control when submission lands. |
 | `TerminalWindow` | title bar (3 dots + filename) + scanline body overlay |
-| `QrPlaceholder` | the fake QR — CSS gradients + nested finder-pattern squares, no real data encoded |
 | `PageHeading` | pixel title + 3-dot teal divider, used on every page except Dashboard (which has a custom header) |
 
 **Layout** in `src/components/layout/`: `Sidebar` (owns the mobile
@@ -151,7 +150,6 @@ design-reference/             # the original mockup export — read-only referen
 
 No auth, no database, no API routes, no form submission, no file upload,
 no tests, no deploy config beyond `create-next-app` defaults. Every input
-on Profile/Help renders but does nothing. The QR code is a static visual
-placeholder, not a generated code. This is all intentional per the
+on Profile/Help renders but does nothing. This is all intentional per the
 project brief for this session — don't "complete" any of it without
 checking with the project owner first.
