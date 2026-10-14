@@ -91,6 +91,13 @@ model Application {
 
   status       ApplicationStatus @default(SUBMITTED)
 
+  /// What the check-in QR encodes. Random and opaque — nothing derived from
+  /// ids or email — so a badge can't be guessed or forged from public facts.
+  /// Created the first time an admitted hacker opens their dashboard (see
+  /// src/lib/badge.ts), so it doesn't depend on how acceptance is marked.
+  /// Only ever rendered for the signed-in owner; never put in a URL.
+  badgeToken String? @unique
+
   school       String
   schoolSource SchoolSource
   major        String

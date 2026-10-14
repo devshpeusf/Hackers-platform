@@ -40,6 +40,9 @@ export const getCurrentHacker = cache(async () => {
     where: { personId: person.id },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     select: {
+      // Server-side only: the badge lookup keys on it (src/lib/badge.ts).
+      // Pages must not pass it on to client components.
+      id: true,
       status: true,
       school: true,
       major: true,
