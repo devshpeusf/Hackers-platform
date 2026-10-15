@@ -7,7 +7,7 @@ import PixelChip from "@/components/ui/PixelChip";
 import SearchBox from "./search-box";
 import type { ApplicationStatus } from "@/generated/prisma/client";
 import { STATUS_STYLE, STATUSES, parseStatus } from "./status";
-import { DECISIONS, decisionLocked } from "@/lib/decisions";
+import { DECISIONS, decisionLocked, needsAnnouncement } from "@/lib/decisions";
 import { decideApplication } from "./actions";
 
 /**
@@ -169,7 +169,7 @@ export default async function AdminApplicationsPage({
     })),
   };
 
-  const [counts, rows] = await Promise.all([
+  const [counts, rows, decided] = await Promise.all([
     prisma.application.groupBy({
       by: ["status"],
       where: { eventId: event.id },
@@ -190,7 +190,16 @@ export default async function AdminApplicationsPage({
         emailQueue: { select: { emailType: true, status: true, sentAt: true } },
       },
     }),
+    // Every decided applicant on the event, not just the filtered page: "how
+    // many still haven't been told" is a property of the whole queue, and
+    // shouldn't change because someone typed a name in the search box.
+    prisma.application.findMany({
+      where: { eventId: event.id, status: { not: "SUBMITTED" } },
+      select: { status: true, emailQueue: { select: { emailType: true } } },
+    }),
   ]);
+
+  const unannounced = decided.filter((d) => needsAnnouncement(d.status, d.emailQueue)).length;
 
   const countByStatus = Object.fromEntries(STATUSES.map((s) => [s, 0])) as Record<(typeof STATUSES)[number], number>;
   for (const c of counts) countByStatus[c.status] = c._count._all;
@@ -222,6 +231,21 @@ export default async function AdminApplicationsPage({
           </Link>
         ))}
       </div>
+
+      {/* Only when there's something to send — once the queue is drained this
+          disappears rather than sitting there as a dead control. */}
+      {unannounced > 0 && (
+        <Link
+          href="/admin/applications/send"
+          className="mb-5 flex flex-wrap items-center justify-between gap-3 border-2 border-accent-pink bg-accent-pink/6 px-4 py-3 transition-colors hover:bg-accent-pink/12"
+        >
+          <span className="text-[13px] leading-[1.7] text-text-secondary">
+            <strong className="text-text-primary">{unannounced}</strong>{" "}
+            {unannounced === 1 ? "decision hasn't" : "decisions haven't"} been emailed yet.
+          </span>
+          <span className="font-pixel text-[9px] tracking-widest text-accent-pink">SEND DECISIONS &rarr;</span>
+        </Link>
+      )}
 
       <div className="mb-4 flex flex-wrap items-center gap-2.5">
         <SearchBox initialQuery={q} status={status?.toLowerCase() ?? null} />
