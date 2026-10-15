@@ -5,7 +5,10 @@ import { prisma } from "@/lib/prisma";
 import { requireOrganizer } from "@/lib/organizer";
 import PixelChip from "@/components/ui/PixelChip";
 import SearchBox from "./search-box";
+import type { ApplicationStatus } from "@/generated/prisma/client";
 import { STATUS_STYLE, STATUSES, parseStatus } from "./status";
+import { DECISIONS, decisionLocked } from "@/lib/decisions";
+import { decideApplication } from "./actions";
 
 /**
  * The organizer review queue: every application for the current event, with
@@ -35,10 +38,83 @@ const SHORT_LEVEL: Record<string, string> = {
  * back as their own columns from md up.
  */
 const ROW_GRID =
-  "grid grid-cols-[minmax(0,1fr)_auto_3.5rem] md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)_minmax(0,1.3fr)_minmax(0,0.9fr)_7.5rem_3.5rem] items-center gap-x-4";
+  "grid grid-cols-[minmax(0,1fr)_auto_3.5rem] md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.3fr)_minmax(0,1.2fr)_minmax(0,0.8fr)_7.5rem_3.5rem_6.5rem] items-center gap-x-4";
 
 function formatApplied(d: Date) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+/** Single letters, because three full labels per row across 81 rows is a wall. */
+const DECIDE_SHORT: Record<(typeof DECISIONS)[number], string> = {
+  ACCEPTED: "A",
+  WAITLISTED: "W",
+  REJECTED: "R",
+};
+
+/**
+ * Decide without leaving the list.
+ *
+ * Deliberately absent once an outcome has been emailed: reversing something the
+ * applicant has already read deserves the detail page, where the warning names
+ * what they were told. Keeping the override off a one-click row control is the
+ * point, not an omission.
+ *
+ * pointer-events are re-enabled here because the wrapper disables them — the
+ * row underneath is one big link, and only these controls should intercept it.
+ */
+function RowDecide({
+  id,
+  status,
+  locked,
+  returnTo,
+}: {
+  id: string;
+  status: ApplicationStatus;
+  locked: boolean;
+  returnTo: string;
+}) {
+  if (locked) {
+    return (
+      <Link
+        href={`/admin/applications/${id}`}
+        className="pointer-events-auto text-[10px] uppercase tracking-wider text-text-faintest hover:text-accent-pink"
+        title="Already emailed — change it on the full application"
+      >
+        emailed
+      </Link>
+    );
+  }
+
+  return (
+    <div className="pointer-events-auto flex gap-1">
+      {DECISIONS.map((d) => {
+        const style = STATUS_STYLE[d];
+        const current = d === status;
+        return (
+          <form key={d} action={decideApplication}>
+            <input type="hidden" name="id" value={id} />
+            <input type="hidden" name="decision" value={d} />
+            <input type="hidden" name="returnTo" value={returnTo} />
+            <button
+              type="submit"
+              disabled={current}
+              title={current ? `Already ${style.label.toLowerCase()}` : `Mark ${style.label.toLowerCase()}`}
+              aria-label={current ? `Already ${style.label.toLowerCase()}` : `Mark ${style.label.toLowerCase()}`}
+              className={clsx(
+                "h-7 w-7 border font-body text-[11px] font-bold transition-colors",
+                current
+                  ? "cursor-default border-transparent opacity-100"
+                  : "border-text-primary/15 opacity-55 hover:opacity-100",
+              )}
+              style={{ color: style.color, borderColor: current ? style.color : undefined }}
+            >
+              {DECIDE_SHORT[d]}
+            </button>
+          </form>
+        );
+      })}
+    </div>
+  );
 }
 
 function filterHref(status: string | null, q: string) {
@@ -75,6 +151,10 @@ export default async function AdminApplicationsPage({
   // Every word has to match somewhere, so "mariana reyes" finds Mariana
   // Reyes without needing a full-name column.
   const terms = q.split(/\s+/).filter(Boolean).slice(0, 5);
+  // Deciding from a row comes back to this exact view — same filter, same
+  // search — rather than dumping you at the unfiltered top of the list.
+  const returnTo = filterHref(status, q);
+
   const where: Prisma.ApplicationWhereInput = {
     eventId: event.id,
     ...(status && { status }),
@@ -105,6 +185,9 @@ export default async function AdminApplicationsPage({
         levelOfStudy: true,
         createdAt: true,
         person: { select: { firstName: true, lastName: true, email: true } },
+        // Enough to know whether this row's outcome has already gone out — a
+        // decided-and-emailed row sends you to the profile rather than deciding here.
+        emailQueue: { select: { emailType: true, status: true, sentAt: true } },
       },
     }),
   ]);
@@ -177,6 +260,7 @@ export default async function AdminApplicationsPage({
           <span className="hidden md:block">LEVEL</span>
           <span>STATUS</span>
           <span className="text-right">APPLIED</span>
+          <span className="hidden text-right md:block">DECIDE</span>
         </div>
 
         {rows.length === 0 ? (
@@ -186,7 +270,7 @@ export default async function AdminApplicationsPage({
             {rows.map((r) => {
               const name = `${r.person.firstName} ${r.person.lastName}`;
               return (
-                <li key={r.id} className="border-b border-border-default last:border-b-0">
+                <li key={r.id} className="relative border-b border-border-default last:border-b-0">
                   <Link
                     href={`/admin/applications/${r.id}`}
                     className={clsx(
@@ -207,7 +291,20 @@ export default async function AdminApplicationsPage({
                       <PixelChip color={STATUS_STYLE[r.status].color}>{STATUS_STYLE[r.status].label}</PixelChip>
                     </span>
                     <span className="text-right tabular-nums text-text-muted">{formatApplied(r.createdAt)}</span>
+                    {/* Reserves the DECIDE column so row text never runs under
+                        the controls, which sit outside this <a> — a button
+                        can't be nested inside a link. */}
+                    <span className="hidden md:block" />
                   </Link>
+
+                  <div className="pointer-events-none absolute inset-y-0 right-4 hidden items-center md:flex md:right-6">
+                    <RowDecide
+                      id={r.id}
+                      status={r.status}
+                      locked={decisionLocked(r.status, r.emailQueue)}
+                      returnTo={returnTo}
+                    />
+                  </div>
                 </li>
               );
             })}
