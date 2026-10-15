@@ -37,7 +37,7 @@ model Person {
 
   firstName String
   lastName  String
-  email     String  @unique
+  email     String @unique
   /// Required — MLH's baseline collection includes phone number. Deliberately
   /// NOT unique though: two applicants can legitimately share a number.
   phoneNum  String
@@ -46,7 +46,11 @@ model Person {
   resume Resume?
 
   // One person can submit many applications
-  applications Application[]
+  applications Application[] @relation("Applicant")
+
+  /// Applications this person decided, when they're an organizer. Empty for
+  /// everyone else.
+  decisions Application[] @relation("Decider")
 }
 
 model Event {
@@ -83,13 +87,22 @@ model Application {
 
   // Connects application to a person
   personId String
-  person   Person @relation(fields: [personId], references: [id])
+  person   Person @relation("Applicant", fields: [personId], references: [id])
 
   // Connects application to an event
   eventId String
   event   Event  @relation(fields: [eventId], references: [id])
 
-  status       ApplicationStatus @default(SUBMITTED)
+  status ApplicationStatus @default(SUBMITTED)
+
+  /// Who marked the decision, and when (PLAT-39). Null while still SUBMITTED —
+  /// and on the one row decided by hand in the database before this existed.
+  ///
+  /// A relation rather than a stored Discord id so the review page can name the
+  /// organizer without a second lookup, and "everything X decided" is a query.
+  decidedAt   DateTime?
+  decidedById String?
+  decidedBy   Person?   @relation("Decider", fields: [decidedById], references: [id])
 
   /// What the check-in QR encodes. Random and opaque — nothing derived from
   /// ids or email — so a badge can't be guessed or forged from public facts.
@@ -105,10 +118,10 @@ model Application {
   levelOfStudy String
   shirtSize    String
 
-  country      String
+  country       String
   /// Stored instead of an age: an age column is wrong within a year, and MLH's
   /// 80%-student rule is judged against the event date.
-  dateOfBirth  DateTime
+  dateOfBirth   DateTime
   /// Computed from dateOfBirth vs. the event's start date at submission time
   /// — not a self-reported answer, so it can't disagree with the birthdate
   /// above. HackJam allows minors (MLH's own Minor Policy covers them), this

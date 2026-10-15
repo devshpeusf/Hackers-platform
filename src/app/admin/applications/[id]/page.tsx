@@ -1,4 +1,6 @@
 import Link from "next/link";
+import type { ApplicationStatus } from "@/generated/prisma/client";
+import clsx from "@/lib/clsx";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireOrganizer } from "@/lib/organizer";
@@ -7,12 +9,109 @@ import PixelCard from "@/components/ui/PixelCard";
 import PixelChip from "@/components/ui/PixelChip";
 import Field from "@/components/ui/Field";
 import { STATUS_STYLE } from "../status";
+import { DECISIONS, announcedEmail } from "@/lib/decisions";
+import { decideApplication } from "../actions";
 
 /**
- * One application in full, for an organizer. Read-only for now — accepting,
- * waitlisting and rejecting from here is the obvious next step, but changing
- * someone's status should be its own deliberate piece of work.
+ * One application in full, for an organizer, and where their decision gets
+ * marked (PLAT-39).
+ *
+ * Still a pure Server Component: the decision controls are plain forms posting
+ * to a Server Action, and the override hides behind a <details>, so none of it
+ * needs client JavaScript.
  */
+
+/**
+ * Accept / waitlist / reject, plus what's already been promised.
+ *
+ * Three states: undecided (just the buttons), decided (buttons plus who and
+ * when), and decided-and-announced — where the buttons move behind a <details>
+ * naming what the applicant was already told. Telling someone they're in and
+ * then reversing it is the worst thing this page can do, so it shouldn't be
+ * one click away.
+ */
+function DecisionPanel({
+  id,
+  status,
+  decidedBy,
+  decidedAt,
+  announced,
+  outcome,
+}: {
+  id: string;
+  status: ApplicationStatus;
+  decidedBy: { firstName: string; lastName: string } | null;
+  decidedAt: Date | null;
+  announced: { emailType: string; sentAt: Date | null } | null;
+  outcome?: string;
+}) {
+  const buttons = (
+    <div className="flex flex-wrap gap-2.5">
+      {DECISIONS.map((d) => {
+        const style = STATUS_STYLE[d];
+        const current = d === status;
+        return (
+          <form key={d} action={decideApplication}>
+            <input type="hidden" name="id" value={id} />
+            <input type="hidden" name="decision" value={d} />
+            {announced && <input type="hidden" name="override" value="true" />}
+            <button
+              type="submit"
+              disabled={current}
+              className={clsx(
+                "pixel-btn-outline bg-surface-bg px-4 py-2.5 font-body text-[11px] font-bold tracking-wide",
+                current && "cursor-default opacity-40",
+              )}
+              style={{ color: style.color }}
+            >
+              {current ? `✓ ${style.label}` : style.label}
+            </button>
+          </form>
+        );
+      })}
+    </div>
+  );
+
+  return (
+    <PixelCard className="mb-6 p-6">
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+        <span className="font-pixel text-[9px] tracking-widest text-accent-pink">// DECISION</span>
+        {decidedAt && (
+          <span className="text-[11px] text-text-faintest">
+            {decidedBy ? `${decidedBy.firstName} ${decidedBy.lastName}` : "Set directly in the database"}
+            {" · "}
+            {formatDate(decidedAt)}
+          </span>
+        )}
+      </div>
+
+      {outcome === "locked" && (
+        <p className="mb-4 border-l-[3px] border-terminal-red bg-terminal-red/6 px-3.5 py-2.5 text-[12px] leading-[1.7] text-text-muted">
+          Not changed &mdash; that decision has already been emailed. Use the override below if
+          you really mean to.
+        </p>
+      )}
+
+      {announced ? (
+        <>
+          <p className="mb-4 border-l-[3px] border-accent-amber bg-accent-amber/6 px-3.5 py-2.5 text-[12px] leading-[1.7] text-text-muted">
+            This applicant was emailed <strong>{announced.emailType}</strong>
+            {announced.sentAt ? ` on ${formatDate(announced.sentAt)}` : " (sending now)"}. Changing
+            it now means telling them something different from what they&apos;ve already read.
+          </p>
+          <details>
+            <summary className="cursor-pointer text-[12px] text-text-muted hover:text-accent-pink">
+              Change it anyway
+            </summary>
+            <div className="mt-3.5">{buttons}</div>
+          </details>
+        </>
+      ) : (
+        buttons
+      )}
+    </PixelCard>
+  );
+}
 
 function formatDate(d: Date) {
   return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
@@ -25,13 +124,25 @@ function formatGraduation(v: string) {
   return new Date(Number(m[1]), Number(m[2]) - 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
 }
 
-export default async function AdminApplicationPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function AdminApplicationPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ decision?: string }>;
+}) {
   await requireOrganizer();
   const { id } = await params;
+  const { decision: outcome } = await searchParams;
 
   const a = await prisma.application.findUnique({
     where: { id },
-    include: { person: { include: { resume: true } }, event: true },
+    include: {
+      person: { include: { resume: true } },
+      event: true,
+      decidedBy: { select: { firstName: true, lastName: true } },
+      emailQueue: { select: { emailType: true, status: true, sentAt: true } },
+    },
   });
   if (!a) notFound();
 
@@ -61,6 +172,15 @@ export default async function AdminApplicationPage({ params }: { params: Promise
             </span>
           </div>
         </div>
+
+        <DecisionPanel
+          id={a.id}
+          status={a.status}
+          decidedBy={a.decidedBy}
+          decidedAt={a.decidedAt}
+          announced={announcedEmail(a.status, a.emailQueue)}
+          outcome={outcome}
+        />
 
         <PixelCard className="p-0">
           <Section number="01" title="BASICS">
