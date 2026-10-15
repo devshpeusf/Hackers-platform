@@ -9,8 +9,13 @@ import PixelCard from "@/components/ui/PixelCard";
 import PixelChip from "@/components/ui/PixelChip";
 import Field from "@/components/ui/Field";
 import { STATUS_STYLE } from "../status";
-import { DECISIONS, announcedEmail } from "@/lib/decisions";
-import { decideApplication } from "../actions";
+import {
+  DECISIONS,
+  announcedEmail,
+  announcementBlockedReason,
+  needsAnnouncement,
+} from "@/lib/decisions";
+import { decideApplication, queueDecisionEmails } from "../actions";
 
 /**
  * One application in full, for an organizer, and where their decision gets
@@ -36,14 +41,20 @@ function DecisionPanel({
   decidedBy,
   decidedAt,
   announced,
+  pendingAnnouncement,
+  blockedReason,
   outcome,
+  justQueued,
 }: {
   id: string;
   status: ApplicationStatus;
   decidedBy: { firstName: string; lastName: string } | null;
   decidedAt: Date | null;
   announced: { emailType: string; sentAt: Date | null } | null;
+  pendingAnnouncement: boolean;
+  blockedReason: string | null;
   outcome?: string;
+  justQueued: boolean;
 }) {
   const buttons = (
     <div className="flex flex-wrap gap-2.5">
@@ -109,6 +120,46 @@ function DecisionPanel({
       ) : (
         buttons
       )}
+
+      {/* Whether this one person has been told, and the one-off send (PLAT-42).
+          The batch path is /admin/applications/send; this is for a decision
+          made after that batch went out. */}
+      {status !== "SUBMITTED" && !announced && (
+        <div className="mt-5 border-t border-text-primary/8 pt-4">
+          {justQueued ? (
+            <p className="text-[12px] leading-[1.7] text-terminal-green">
+              Email queued — it goes out on the next scheduler run.
+            </p>
+          ) : blockedReason ? (
+            <p className="text-[12px] leading-[1.7] text-text-muted">
+              Not emailed yet &mdash; {blockedReason}.
+            </p>
+          ) : pendingAnnouncement ? (
+            <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2">
+              <form action={queueDecisionEmails}>
+                <input type="hidden" name="id" value={id} />
+                <button
+                  type="submit"
+                  className="pixel-btn-outline bg-surface-bg px-4 py-2.5 font-body text-[11px] font-bold tracking-wide text-text-primary"
+                >
+                  EMAIL THIS DECISION
+                </button>
+              </form>
+              <span className="text-[11px] leading-[1.6] text-text-faintest">
+                Queues one email. Nothing leaves until the next scheduler run.
+              </span>
+            </div>
+          ) : (
+            <p className="text-[12px] leading-[1.7] text-text-muted">
+              Email already queued &mdash; follow it on{" "}
+              <Link href="/admin/email-queue" className="text-accent-pink hover:underline">
+                the email queue
+              </Link>
+              .
+            </p>
+          )}
+        </div>
+      )}
     </PixelCard>
   );
 }
@@ -129,11 +180,11 @@ export default async function AdminApplicationPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ decision?: string }>;
+  searchParams: Promise<{ decision?: string; queued?: string }>;
 }) {
   await requireOrganizer();
   const { id } = await params;
-  const { decision: outcome } = await searchParams;
+  const { decision: outcome, queued } = await searchParams;
 
   const a = await prisma.application.findUnique({
     where: { id },
@@ -179,7 +230,14 @@ export default async function AdminApplicationPage({
           decidedBy={a.decidedBy}
           decidedAt={a.decidedAt}
           announced={announcedEmail(a.status, a.emailQueue)}
+          pendingAnnouncement={needsAnnouncement(a.status, a.emailQueue)}
+          blockedReason={
+            a.status === "SUBMITTED"
+              ? null
+              : announcementBlockedReason(a.status, process.env.RSVP_URL)
+          }
           outcome={outcome}
+          justQueued={Number(queued) > 0}
         />
 
         <PixelCard className="p-0">
@@ -211,12 +269,17 @@ export default async function AdminApplicationPage({
             <Field label={applicationCopy.questions[2]} value={a.quirkFact} multiline tone="secondary" />
             <Field label="GitHub" optional value={a.gitHub ?? undefined} placeholder="Not given" tone="secondary" />
             <Field label="LinkedIn" optional value={a.linkedIn ?? undefined} placeholder="Not given" tone="secondary" />
-            <Field label="Resume" value={a.person.resume?.fileName} placeholder="None on file" tone="secondary" />
           </Section>
 
           <Divider />
 
-          <Section number="04" title="CONSENT">
+          <Section number="04" title="RESUME">
+            <ResumePanel applicationId={a.id} resume={a.person.resume} />
+          </Section>
+
+          <Divider />
+
+          <Section number="05" title="CONSENT">
             <Field label="MLH Code of Conduct" value={a.agreedCodeOfConduct ? "Agreed" : "Not agreed"} tone="secondary" />
             <Field label="MLH data sharing" value={a.agreedDataSharing ? "Agreed" : "Not agreed"} tone="secondary" />
             <Field label="MLH marketing" value={a.agreedMarketing ? "Opted in" : "Opted out"} tone="secondary" />
@@ -224,6 +287,73 @@ export default async function AdminApplicationPage({
           </Section>
         </PixelCard>
       </div>
+    </div>
+  );
+}
+
+/**
+ * The applicant's resume, readable without leaving the page (PLAT-30).
+ *
+ * The <iframe> points at this application's resume route, which mints a fresh
+ * signed URL per load — so nothing here holds a credential, and the preview
+ * can't go stale.
+ *
+ * Desktop only. A PDF in an iframe is the browser's built-in viewer, and on
+ * mobile Safari in particular that renders as a blank box or a download prompt
+ * rather than a document; the links below work everywhere, so phones get those
+ * instead of a broken frame.
+ *
+ * It's Person.resume, not a per-application upload — someone who re-uploaded
+ * after applying has one resume, the current one. The upload date is shown so
+ * that's visible rather than implied.
+ */
+function ResumePanel({
+  applicationId,
+  resume,
+}: {
+  applicationId: string;
+  resume: { fileName: string; uploadedAt: Date } | null;
+}) {
+  if (!resume) {
+    return (
+      <p className="text-[12px] leading-[1.7] text-text-faintest">
+        None on file. Resumes were required at submission, so this is unexpected &mdash; worth asking
+        them for one.
+      </p>
+    );
+  }
+
+  const href = `/admin/applications/${applicationId}/resume`;
+
+  return (
+    <div>
+      <div className="mb-3.5 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <span className="break-all text-[12px] font-bold text-text-primary">{resume.fileName}</span>
+        <span className="text-[11px] text-text-faintest">uploaded {formatDate(resume.uploadedAt)}</span>
+      </div>
+
+      <div className="mb-4 flex flex-wrap gap-2.5">
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="pixel-btn-outline bg-surface-bg px-4 py-2.5 font-body text-[11px] font-bold tracking-wide text-text-primary"
+        >
+          OPEN &rarr;
+        </a>
+        <a
+          href={`${href}?download=1`}
+          className="pixel-btn-outline bg-surface-bg px-4 py-2.5 font-body text-[11px] font-bold tracking-wide text-text-muted"
+        >
+          DOWNLOAD
+        </a>
+      </div>
+
+      <iframe
+        src={href}
+        title={`Resume: ${resume.fileName}`}
+        className="hidden h-[820px] w-full border-2 border-border-default bg-surface-bg md:block"
+      />
     </div>
   );
 }

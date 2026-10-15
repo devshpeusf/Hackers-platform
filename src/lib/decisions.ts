@@ -27,6 +27,8 @@ export function parseDecision(raw: unknown): Decision | null {
  * ApplicationStatus values on purpose, so this is a cast rather than a lookup
  * table that could fall out of step with the enum.
  */
+export function emailTypeFor(status: Decision): EmailType;
+export function emailTypeFor(status: ApplicationStatus): EmailType | null;
 export function emailTypeFor(status: ApplicationStatus): EmailType | null {
   return status === "SUBMITTED" ? null : (status satisfies Decision as EmailType);
 }
@@ -67,4 +69,44 @@ export function decisionLocked(
   emails: readonly QueuedEmail[],
 ): boolean {
   return announcedEmail(status, emails) !== null;
+}
+
+/**
+ * Whether this outcome still needs its email queued (PLAT-42).
+ *
+ * "No row of that type exists" rather than "no SENT row": a FAILED row has
+ * already been queued and its retry path is the RETRY button on
+ * /admin/email-queue, not a second insert. The @@unique([applicationId,
+ * emailType]) constraint would reject one anyway — this just means the UI
+ * doesn't offer to do something the database will refuse.
+ */
+export function needsAnnouncement(
+  status: ApplicationStatus,
+  emails: readonly { emailType: EmailType }[],
+): boolean {
+  const expected = emailTypeFor(status);
+  if (!expected) return false;
+  return !emails.some((e) => e.emailType === expected);
+}
+
+/**
+ * Why this decision can't be emailed yet, or null if it can.
+ *
+ * Only ACCEPTED is ever blocked, and only until RSVP exists (PLAT-43): the
+ * acceptance template's "confirm I'm coming" button points at RSVP_URL, and
+ * the send route already throws rather than mail a dead link. Checking it
+ * here too means those rows are never queued in the first place — queueing
+ * them would burn all three attempts and park them in FAILED, which reads
+ * like a broken send rather than a feature that isn't built.
+ *
+ * Takes the URL as an argument instead of reading process.env so this module
+ * stays pure and the rule is testable both ways.
+ */
+export function announcementBlockedReason(
+  decision: Decision,
+  rsvpUrl: string | undefined,
+): string | null {
+  if (decision !== "ACCEPTED") return null;
+  if (rsvpUrl) return null;
+  return "RSVP_URL isn't set, so the acceptance email's confirm button would be dead (PLAT-43)";
 }

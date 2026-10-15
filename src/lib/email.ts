@@ -2,13 +2,26 @@ import { Resend } from "resend";
 import type { ReactElement } from "react";
 
 /**
- * Transactional email (PLAT-23) — confirmation only for now. No MLH
- * reminder, no decision emails, no scheduled sending; see TASKS.md.
+ * Transactional email (PLAT-23) — confirmation and the three decision
+ * emails. Nothing is sent from here directly: callers queue an EmailQueue
+ * row and the send route drains it.
  *
- * A single shared client rather than one per call: Resend's client is
- * cheap to reuse and there's no per-request state to isolate.
+ * A single shared client rather than one per call: Resend's client is cheap
+ * to reuse and there's no per-request state to isolate. Built on first use
+ * rather than at import, though — `new Resend(undefined)` throws, so a
+ * module-scope client meant merely importing this file crashed any
+ * environment without the key. That took out `npm run build` on a fresh
+ * clone and in CI, neither of which sends email.
  */
-export const resend = new Resend(process.env.RESEND_API_KEY);
+let client: Resend | null = null;
+
+function getResend(): Resend {
+  if (client) return client;
+  const key = process.env.RESEND_API_KEY;
+  if (!key) throw new Error("RESEND_API_KEY is not set — no email can be sent");
+  client = new Resend(key);
+  return client;
+}
 
 const FROM = "HackJam <noreply@mail.hackjam26.com>";
 
@@ -29,7 +42,7 @@ type SendEmailArgs = {
  * submission; a future email might need different handling).
  */
 export async function sendEmail({ to, subject, react }: SendEmailArgs) {
-  const { data, error } = await resend.emails.send({
+  const { data, error } = await getResend().emails.send({
     from: FROM,
     to,
     subject,

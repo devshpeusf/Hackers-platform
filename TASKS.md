@@ -129,10 +129,14 @@ submit.
 ## Phase 6 — Organizer dashboard + sponsor portal
 
 - [ ] Design pass first `[no ticket]`
-- [ ] Application list `[PLAT-28]`, open resumes `[PLAT-30]`, spreadsheet
-      export `[PLAT-29]`
-- [ ] Accept/reject/waitlist actions `[no ticket]` — PLAT-28 lists
-      applications; nothing files the *decisions*.
+- [x] Application list + search/filter `[PLAT-28]`, applicant detail `[PLAT-38]`
+- [x] Resumes opened from the review page — signed URL per view, inline
+      preview on desktop `[PLAT-30]`
+- [ ] Spreadsheet export `[PLAT-29]`
+- [x] Accept/waitlist/reject, attributed and timestamped `[PLAT-39]`
+- [x] Queueing the decision emails `[PLAT-42]` — acceptances are held back
+      until `RSVP_URL` points at a real RSVP page `[PLAT-43]`
+- [ ] Bulk decide `[PLAT-40]`
 - [ ] Sponsor-facing resume access `[no ticket]`
 
 ## Phase 7 — Testing & launch readiness
