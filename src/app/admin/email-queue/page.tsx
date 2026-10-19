@@ -17,15 +17,30 @@ import { resetEmailQueueRow } from "./actions";
 export default async function EmailQueuePage() {
   await requireOrganizer();
 
-  const [counts, failedRows] = await Promise.all([
+  const [counts, failedRows, pendingRows] = await Promise.all([
     prisma.emailQueue.groupBy({ by: ["status"], _count: { status: true } }),
     prisma.emailQueue.findMany({
       where: { status: "FAILED" },
       include: { application: { include: { person: true } } },
       orderBy: { createdAt: "asc" },
     }),
+    prisma.emailQueue.findMany({
+      where: { status: "PENDING" },
+      select: {
+        id: true,
+        emailType: true,
+        createdAt: true,
+        application: {
+          select: {
+            person: { select: { email: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: "asc" },
+    }),
   ]);
 
+  
   const countByStatus = { PENDING: 0, SENDING: 0, SENT: 0, FAILED: 0 };
   for (const row of counts) countByStatus[row.status] = row._count.status;
 
@@ -41,6 +56,39 @@ export default async function EmailQueuePage() {
           <StatCard label="SENT" value={countByStatus.SENT} color="var(--color-terminal-green)" />
           <StatCard label="FAILED" value={countByStatus.FAILED} color="var(--color-terminal-red)" />
         </div>
+        <section className="mb-8">
+          <h2 className="mb-3 font-pixel text-[11px] tracking-widest text-accent-teal">
+    // PENDING — {pendingRows.length}
+          </h2>
+
+          {pendingRows.length === 0 ? (
+            <PixelCard className="p-6 text-[13px] text-text-muted">
+              No emails waiting to send.
+            </PixelCard>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {pendingRows.map((row) => (
+                <PixelCard
+                  key={row.id}
+                  borderColor="var(--color-accent-teal)"
+                  className="p-5"
+                >
+                  <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                    <PixelChip color="var(--color-accent-teal)">
+                      {row.emailType}
+                    </PixelChip>
+                    <span className="break-all text-[12px] font-bold text-text-primary">
+                      {row.application.person.email}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-text-faintest">
+                    Queued {row.createdAt.toLocaleString()}
+                  </p>
+                </PixelCard>
+              ))}
+            </div>
+          )}
+        </section>
 
         <h2 className="mb-3 font-pixel text-[11px] tracking-widest text-terminal-red">
           // FAILED — {failedRows.length}
