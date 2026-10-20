@@ -10,8 +10,12 @@ import { toApplicantIdentity } from "@/lib/supabase/user";
  * for the people running the event (see prisma/schema.prisma). This is the
  * one place that question gets asked, so every organizer-only page/action
  * checks it the same way rather than each reimplementing the lookup.
+ *
+ * Takes the verified id from toApplicantIdentity — null (no Discord identity
+ * on the session) is never an organizer.
  */
-export async function isOrganizer(discordId: string): Promise<boolean> {
+export async function isOrganizer(discordId: string | null): Promise<boolean> {
+  if (!discordId) return false;
   const person = await prisma.person.findUnique({
     where: { discordId },
     select: { role: true },

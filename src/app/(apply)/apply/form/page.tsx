@@ -25,6 +25,9 @@ export default async function ApplyFormPage() {
   if (!user) redirect("/apply?signin=required");
 
   const identity = toApplicantIdentity(user);
+  // No verified Discord identity counts as signed out. /apply shows its
+  // sign-in screen in that case rather than redirecting back, so no loop.
+  if (!identity.discordId) redirect("/apply?signin=required");
 
   // Someone who has already applied gets sent straight to their application.
   // Without this they'd be handed a blank five-step form and only discover at

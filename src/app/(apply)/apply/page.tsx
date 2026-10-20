@@ -36,9 +36,10 @@ export default async function ApplyLandingPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (user) {
-    const identity = toApplicantIdentity(user);
-    redirect((await hasApplied(identity.discordId)) ? "/apply/applied" : "/apply/form");
+  // No verified Discord identity counts as signed out: show the sign-in screen.
+  const discordId = user ? toApplicantIdentity(user).discordId : null;
+  if (discordId) {
+    redirect((await hasApplied(discordId)) ? "/apply/applied" : "/apply/form");
   }
 
   return (

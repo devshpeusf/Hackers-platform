@@ -66,6 +66,9 @@ export default async function ApplicationStatusPage() {
   if (!user) redirect("/apply?signin=required");
 
   const identity = toApplicantIdentity(user);
+  // Verified Discord id only. This page used to key on the editable
+  // metadata id, which let anyone read another applicant's application.
+  if (!identity.discordId) redirect("/apply?signin=required");
 
   const application = await getApplication(identity.discordId);
 
