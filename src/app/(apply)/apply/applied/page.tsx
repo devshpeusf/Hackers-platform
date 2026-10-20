@@ -23,8 +23,11 @@ export default async function AlreadyAppliedPage() {
 
   if (!user) redirect("/apply?signin=required");
 
-  const identity = toApplicantIdentity(user);
-  const application = await getApplication(identity.discordId);
+  // Verified Discord id only — see verifiedDiscordId.
+  const { discordId } = toApplicantIdentity(user);
+  if (!discordId) redirect("/apply?signin=required");
+
+  const application = await getApplication(discordId);
   if (!application) redirect("/apply/form");
 
   // The address they gave on the form, not their Discord one — that's where

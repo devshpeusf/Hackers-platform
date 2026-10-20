@@ -14,13 +14,19 @@ export type ApplicantIdentity = {
    * Supabase's own internal user id (what `auth.uid()` returns in Postgres),
    * NOT the same value as discordId below. Storage RLS policies can only
    * check `auth.uid()` — Postgres has no native concept of "Discord id", that
-   * only exists because this app parses it out of user_metadata. Needed for
+   * only exists because this app reads it off the provider identity. Needed for
    * the resume upload path, which writes into a per-user folder keyed on
    * this value; using discordId there would make every upload fail RLS.
    */
   supabaseUserId: string;
-  /** Discord's own user id — the stable identity to key an application on. */
-  discordId: string;
+  /**
+   * Discord's own user id — the identity applications, organizer status and
+   * ownership are keyed on. Read ONLY from Supabase's provider identity (see
+   * verifiedDiscordId), never from user_metadata, which the user can edit.
+   * Null when the session has no Discord identity: callers must treat that
+   * as "not signed in", never fall back to something else.
+   */
+  discordId: string | null;
   /** The @handle, e.g. "mreyes". */
   username: string;
   /** Discord's display name if set, otherwise the handle. */
@@ -54,6 +60,30 @@ function pick(meta: Record<string, unknown>, ...keys: string[]): string | null {
   return null;
 }
 
+/**
+ * The signed-in user's Discord id, from the provider identity Supabase Auth
+ * records at sign-in — the same source src/lib/current-hacker.ts uses.
+ *
+ * NOT from user_metadata. Any signed-in user can rewrite their own metadata
+ * with the public key (supabase.auth.updateUser({ data })), so an id read
+ * from there is whatever they typed: someone could set provider_id to
+ * another applicant's Discord id to read or overwrite that application, or
+ * to an organizer's to get into /admin. That's exactly what this used to do,
+ * metadata first.
+ *
+ * Returns null rather than falling back when there's no Discord identity.
+ */
+export function verifiedDiscordId(user: User): string | null {
+  const discord = user.identities?.find((identity) => identity.provider === "discord");
+  const sub: unknown = discord?.identity_data?.sub;
+  return typeof sub === "string" && sub.trim() ? sub : null;
+}
+
+/**
+ * Display details come from user_metadata, which is fine: a user editing
+ * their own handle or avatar only changes what they see. Anything that
+ * decides access or ownership uses discordId, which doesn't come from there.
+ */
 export function toApplicantIdentity(user: User): ApplicantIdentity {
   const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
   const claims = (meta.custom_claims ?? {}) as Record<string, unknown>;
@@ -66,10 +96,7 @@ export function toApplicantIdentity(user: User): ApplicantIdentity {
 
   return {
     supabaseUserId: user.id,
-    discordId:
-      pick(meta, "provider_id", "sub") ??
-      user.identities?.find((i) => i.provider === "discord")?.id ??
-      user.id,
+    discordId: verifiedDiscordId(user),
     username,
     displayName: pick(claims, "global_name") ?? pick(meta, "full_name", "name") ?? username,
     avatarUrl: pick(meta, "avatar_url", "picture"),

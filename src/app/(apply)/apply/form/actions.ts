@@ -43,7 +43,11 @@ export async function submitApplication(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "unauthenticated" };
 
-  const identity = toApplicantIdentity(user);
+  // The verified Discord id, never user_metadata: that's editable by the
+  // user, so trusting it would let someone submit over another applicant's
+  // Person row (see verifiedDiscordId).
+  const { discordId } = toApplicantIdentity(user);
+  if (!discordId) return { ok: false, error: "unauthenticated" };
 
   // 2. The resume was already uploaded client-side before this was called —
   //    but a bypassed client could hand over any storageKey string, pointing
@@ -90,7 +94,7 @@ export async function submitApplication(
     //    Application is a half-finished record nobody would ever clean up.
     application = await prisma.$transaction(async (tx) => {
       const person = await tx.person.upsert({
-        where: { discordId: identity.discordId },
+        where: { discordId },
         // Returning applicants get their details refreshed rather than
         // duplicated; the Discord id is what makes them the same person.
         update: {
@@ -100,7 +104,7 @@ export async function submitApplication(
           phoneNum: v.phone,
         },
         create: {
-          discordId: identity.discordId,
+          discordId,
           firstName: v.firstName,
           lastName: v.lastName,
           email: v.email,

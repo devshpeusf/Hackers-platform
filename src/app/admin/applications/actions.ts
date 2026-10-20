@@ -40,9 +40,12 @@ async function currentOrganizer(): Promise<{ id: string } | null> {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const identity = toApplicantIdentity(user);
+  // Verified Discord id only — see verifiedDiscordId for why not metadata.
+  const { discordId } = toApplicantIdentity(user);
+  if (!discordId) return null;
+
   const person = await prisma.person.findUnique({
-    where: { discordId: identity.discordId },
+    where: { discordId },
     select: { id: true, role: true },
   });
   return person?.role === "ORGANIZER" ? { id: person.id } : null;
