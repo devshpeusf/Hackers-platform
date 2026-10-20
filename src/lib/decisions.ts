@@ -71,6 +71,34 @@ export function decisionLocked(
   return announcedEmail(status, emails) !== null;
 }
 
+/** Most applicants one bulk decision may touch. Above the current event's size, below anything abusive. */
+export const BULK_LIMIT = 500;
+
+/**
+ * Splits a bulk selection into what a decision would actually change.
+ *
+ * - unchanged: already at this decision — left alone, so who decided them and
+ *   when isn't overwritten.
+ * - locked: their current outcome has already been emailed. Changing those
+ *   stays a one-at-a-time action on the detail page, behind its warning; bulk
+ *   never overrides, the same rule as the row buttons.
+ * - toChange: everything else.
+ */
+export function planBulkDecision<T extends { id: string; status: ApplicationStatus; emailQueue: readonly QueuedEmail[] }>(
+  applications: readonly T[],
+  decision: Decision,
+): { toChange: T[]; unchanged: T[]; locked: T[] } {
+  const toChange: T[] = [];
+  const unchanged: T[] = [];
+  const locked: T[] = [];
+  for (const application of applications) {
+    if (application.status === decision) unchanged.push(application);
+    else if (decisionLocked(application.status, application.emailQueue)) locked.push(application);
+    else toChange.push(application);
+  }
+  return { toChange, unchanged, locked };
+}
+
 /**
  * Whether this outcome still needs its email queued (PLAT-42).
  *
