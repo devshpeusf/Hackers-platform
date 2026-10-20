@@ -9,6 +9,8 @@ import type { ApplicationStatus } from "@/generated/prisma/client";
 import { STATUS_STYLE, STATUSES, parseStatus } from "./status";
 import { DECISIONS, decisionLocked, needsAnnouncement } from "@/lib/decisions";
 import { decideApplication } from "./actions";
+import { BulkDecideBar, SelectAll } from "./bulk-decide";
+import { BULK_FORM_ID } from "./bulk-form";
 
 /**
  * The organizer review queue: every application for the current event, with
@@ -38,7 +40,7 @@ const SHORT_LEVEL: Record<string, string> = {
  * back as their own columns from md up.
  */
 const ROW_GRID =
-  "grid grid-cols-[minmax(0,1fr)_auto_3.5rem] md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.3fr)_minmax(0,1.2fr)_minmax(0,0.8fr)_7.5rem_3.5rem_6.5rem] items-center gap-x-4";
+  "grid grid-cols-[minmax(0,1fr)_auto_3.5rem] md:grid-cols-[1.25rem_minmax(0,1.1fr)_minmax(0,1.3fr)_minmax(0,1.2fr)_minmax(0,0.8fr)_7.5rem_3.5rem_6.5rem] items-center gap-x-4";
 
 function formatApplied(d: Date) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -128,7 +130,15 @@ function filterHref(status: string | null, q: string) {
 export default async function AdminApplicationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    status?: string;
+    bulk?: string;
+    changed?: string;
+    unchanged?: string;
+    skipped?: string;
+    ignored?: string;
+  }>;
 }) {
   await requireOrganizer();
 
@@ -232,6 +242,8 @@ export default async function AdminApplicationsPage({
         ))}
       </div>
 
+      <BulkResult params={params} />
+
       {/* Only when there's something to send — once the queue is drained this
           disappears rather than sitting there as a dead control. */}
       {unannounced > 0 && (
@@ -278,6 +290,9 @@ export default async function AdminApplicationsPage({
             "sticky top-0 z-10 border-b-2 border-border-default bg-surface-bg px-4 py-3 font-pixel text-[8px] tracking-widest text-text-muted md:px-6",
           )}
         >
+          <span className="hidden items-center md:flex">
+            <SelectAll />
+          </span>
           <span>NAME</span>
           <span className="hidden md:block">EMAIL</span>
           <span className="hidden md:block">SCHOOL</span>
@@ -302,6 +317,9 @@ export default async function AdminApplicationsPage({
                       "group px-4 py-2.5 text-[13px] text-text-secondary transition-colors hover:bg-accent-pink/7 focus-visible:bg-accent-pink/7 focus-visible:shadow-[inset_3px_0_0_var(--color-accent-pink)] focus-visible:outline-none md:px-6",
                     )}
                   >
+                    {/* Reserves the checkbox column — the checkbox itself sits
+                        outside this <a>, like the DECIDE controls. */}
+                    <span className="hidden md:block" />
                     <span className="min-w-0">
                       <span className="block truncate font-bold text-text-primary group-hover:text-accent-pink">
                         {name}
@@ -321,6 +339,27 @@ export default async function AdminApplicationsPage({
                     <span className="hidden md:block" />
                   </Link>
 
+                  {(() => {
+                    const locked = decisionLocked(r.status, r.emailQueue);
+                    return (
+                      <div className="pointer-events-none absolute inset-y-0 left-6 hidden items-center md:flex">
+                        {/* Joined to the bulk form by id, not nested in it.
+                            Already-emailed rows can't be selected: bulk never
+                            changes those (the server skips them regardless). */}
+                        <input
+                          type="checkbox"
+                          name="ids"
+                          value={r.id}
+                          form={BULK_FORM_ID}
+                          disabled={locked}
+                          aria-label={locked ? `${name} — already emailed, change on their page` : `Select ${name}`}
+                          title={locked ? "Already emailed — change it on the full application" : undefined}
+                          className="pointer-events-auto h-4 w-4 cursor-pointer accent-[var(--color-accent-pink)] disabled:cursor-not-allowed disabled:opacity-30"
+                        />
+                      </div>
+                    );
+                  })()}
+
                   <div className="pointer-events-none absolute inset-y-0 right-4 hidden items-center md:flex md:right-6">
                     <RowDecide
                       id={r.id}
@@ -336,7 +375,9 @@ export default async function AdminApplicationsPage({
         )}
       </div>
 
-      <p className="py-4 text-[11px] text-text-faintest">
+      <BulkDecideBar returnTo={returnTo} />
+
+      <p className="py-4 text-[11px] text-text-faintest md:pb-24">
         {filtered ? (
           <>
             Showing <span className="text-text-secondary">{rows.length}</span> of {total}
@@ -346,6 +387,38 @@ export default async function AdminApplicationsPage({
         )}
       </p>
     </Shell>
+  );
+}
+
+const BULK_VERB: Record<string, string> = {
+  accepted: "Accepted",
+  waitlisted: "Waitlisted",
+  rejected: "Rejected",
+};
+
+/** What the last bulk decision did, read back from the redirect's query string. */
+function BulkResult({ params }: { params: Record<string, string | undefined> }) {
+  const verb = params.bulk ? BULK_VERB[params.bulk] : undefined;
+  if (!verb) return null;
+  const n = (k: string) => Math.max(0, Number(params[k]) || 0);
+  const changed = n("changed");
+  const unchanged = n("unchanged");
+  const skipped = n("skipped");
+  const ignored = n("ignored");
+
+  const parts = [`${verb} ${changed}`];
+  if (unchanged) parts.push(`${unchanged} already ${verb.toLowerCase()}`);
+  if (skipped) parts.push(`${skipped} skipped because they've already been emailed`);
+  if (ignored) parts.push(`${ignored} not on this event, ignored`);
+
+  return (
+    <p
+      role="status"
+      className="mb-5 border-l-[3px] border-accent-teal bg-accent-teal/6 px-3.5 py-2.5 text-[12px] leading-[1.7] text-text-secondary"
+    >
+      {parts.join(" · ")}.{" "}
+      {changed > 0 && <span className="text-text-muted">Nobody has been emailed yet.</span>}
+    </p>
   );
 }
 

@@ -6,11 +6,14 @@ import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { toApplicantIdentity } from "@/lib/supabase/user";
 import {
+  BULK_LIMIT,
+  DECISIONS,
   announcementBlockedReason,
   decisionLocked,
   emailTypeFor,
   needsAnnouncement,
   parseDecision,
+  planBulkDecision,
 } from "@/lib/decisions";
 import type { EmailType } from "@/generated/prisma/client";
 
@@ -118,6 +121,84 @@ export async function decideApplication(formData: FormData) {
   revalidatePath(back);
 
   redirect(`${back}${back.includes("?") ? "&" : "?"}decision=${result}`);
+}
+
+/**
+ * Marks many applicants with one decision at once, from the list's checkboxes.
+ *
+ * Only decides — nothing is emailed. Those applicants then show up in the
+ * "decisions haven't been emailed yet" banner like any other decision.
+ *
+ * The browser only sends a list of ids, so none of it is trusted: the
+ * organizer is re-checked, ids are de-duplicated and capped, and only
+ * applications on the current event are touched — an id from anywhere else
+ * is ignored rather than decided.
+ *
+ * Applicants whose outcome has already been emailed are always skipped (see
+ * planBulkDecision); there's deliberately no bulk override.
+ */
+export async function decideApplications(formData: FormData) {
+  const decision = parseDecision(formData.get("decision"));
+  const returnTo = safeReturnTo(formData.get("returnTo")) ?? "/admin/applications";
+  const ids = [
+    ...new Set(formData.getAll("ids").filter((v): v is string => typeof v === "string" && v.length > 0)),
+  ];
+
+  if (!decision || ids.length === 0 || ids.length > BULK_LIMIT) return;
+
+  const organizer = await currentOrganizer();
+  if (!organizer) return;
+
+  const event = await prisma.event.findFirst({ orderBy: { startDate: "desc" } });
+  if (!event) return;
+
+  const result = await prisma.$transaction(async (tx) => {
+    const applications = await tx.application.findMany({
+      where: { id: { in: ids }, eventId: event.id },
+      select: {
+        id: true,
+        status: true,
+        emailQueue: { select: { emailType: true, status: true, sentAt: true } },
+      },
+    });
+
+    const plan = planBulkDecision(applications, decision);
+
+    // The write repeats the plan's conditions instead of trusting the read:
+    // if a decision email goes out, or someone else decides one of these,
+    // between the read and here, that row is left alone rather than flipped.
+    const updated = plan.toChange.length
+      ? await tx.application.updateMany({
+          where: {
+            id: { in: plan.toChange.map((a) => a.id) },
+            eventId: event.id,
+            status: { not: decision },
+            NOT: {
+              OR: DECISIONS.map((d) => ({
+                status: d,
+                emailQueue: { some: { emailType: emailTypeFor(d), status: { in: ["SENT", "SENDING"] } } },
+              })),
+            },
+          },
+          data: { status: decision, decidedById: organizer.id, decidedAt: new Date() },
+        })
+      : { count: 0 };
+
+    return {
+      changed: updated.count,
+      unchanged: plan.unchanged.length,
+      skipped: plan.locked.length + (plan.toChange.length - updated.count),
+      ignored: ids.length - applications.length,
+    };
+  });
+
+  revalidatePath("/admin/applications");
+
+  const params = new URLSearchParams({ bulk: decision.toLowerCase(), changed: String(result.changed) });
+  if (result.unchanged) params.set("unchanged", String(result.unchanged));
+  if (result.skipped) params.set("skipped", String(result.skipped));
+  if (result.ignored) params.set("ignored", String(result.ignored));
+  redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}${params}`);
 }
 
 /**
