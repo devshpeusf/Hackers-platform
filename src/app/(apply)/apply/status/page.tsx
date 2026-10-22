@@ -6,8 +6,8 @@ import { getApplication } from "@/lib/applications";
 import { createClient } from "@/lib/supabase/server";
 import { toApplicantIdentity } from "@/lib/supabase/user";
 import PixelCard from "@/components/ui/PixelCard";
-import PixelChip from "@/components/ui/PixelChip";
 import Field from "@/components/ui/Field";
+import StatusCard from "@/components/StatusCard";
 import { mlhRegistration, applicationCopy } from "@/lib/placeholder-data";
 import { STARFIELD } from "../../_shared";
 
@@ -22,29 +22,6 @@ import { STARFIELD } from "../../_shared";
  * shouldn't be shown Team/Schedule/Guide nav they can't use yet.
  */
 
-/** Per-status copy. The enum is Juan's, in prisma/schema.prisma. */
-const STATUS_COPY = {
-  SUBMITTED: {
-    label: "SUBMITTED",
-    color: "var(--color-accent-teal)",
-    blurb: "We've got it. Decisions go out before the event — we'll email you either way.",
-  },
-  ACCEPTED: {
-    label: "ACCEPTED",
-    color: "var(--color-accent-teal)",
-    blurb: "You're in. Check your email for what happens next.",
-  },
-  WAITLISTED: {
-    label: "WAITLISTED",
-    color: "var(--color-accent-amber)",
-    blurb: "You're on the waitlist. Spots often open up as the date gets closer.",
-  },
-  REJECTED: {
-    label: "NOT THIS TIME",
-    color: "var(--color-text-dim)",
-    blurb: "We couldn't fit you in this year. Please do apply again — it's not a judgement on you.",
-  },
-} as const;
 
 function formatDate(d: Date) {
   return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
@@ -75,8 +52,6 @@ export default async function ApplicationStatusPage() {
   // Signed in but never applied — reachable by typing the URL.
   if (!application) return <NoApplication />;
 
-  const status = STATUS_COPY[application.status] ?? STATUS_COPY.SUBMITTED;
-
   return (
     <div className={clsx("min-h-screen px-6 py-8 md:px-11 md:py-10", STARFIELD)}>
       <div className="mx-auto max-w-[860px]">
@@ -91,17 +66,15 @@ export default async function ApplicationStatusPage() {
               className="mb-4 h-auto w-[150px] [image-rendering:pixelated]"
             />
             <h1 className="font-pixel text-lg leading-[1.7]">YOUR APPLICATION</h1>
-            <p className="mt-3 max-w-[460px] text-[13px] leading-[1.8] text-text-muted">
-              {status.blurb}
-            </p>
           </div>
-          <div className="flex shrink-0 flex-col items-start gap-2.5 sm:items-end">
-            <PixelChip color={status.color}>{status.label}</PixelChip>
-            <span className="text-[11px] text-text-faintest">
-              Submitted {formatDate(application.createdAt)}
-            </span>
-          </div>
+          <span className="shrink-0 text-[11px] text-text-faintest sm:pt-2">
+            Submitted {formatDate(application.createdAt)}
+          </span>
         </div>
+
+        {/* The real status (PLAT-45) — the same card the portal dashboard
+            shows, from this viewer's own application only. */}
+        <StatusCard status={application.status} className="mb-6 p-6" />
 
         {/* MLH registration — the one thing still outstanding */}
         <PixelCard borderColor="var(--color-accent-amber)" className="mb-6 p-6">
@@ -244,16 +217,9 @@ function NoApplication() {
         height={85}
         className="mb-6 h-auto w-[170px] [image-rendering:pixelated]"
       />
-      <h1 className="mb-4 font-pixel text-base leading-[1.7]">NOTHING HERE YET</h1>
-      <p className="mb-7 max-w-[380px] text-[13px] leading-[1.8] text-text-muted">
-        You haven&apos;t applied to HackJam &#39;26 with this Discord account.
-      </p>
-      <Link
-        href="/apply/form"
-        className="pixel-btn-solid inline-flex px-[22px] py-[11px] font-body text-[11px] font-bold tracking-wide text-surface-bg"
-      >
-        START AN APPLICATION &rarr;
-      </Link>
+      <div className="w-full max-w-[420px] text-left">
+        <StatusCard status={null} />
+      </div>
     </div>
   );
 }

@@ -6,16 +6,20 @@ import Link from "next/link";
 import PixelCard from "@/components/ui/PixelCard";
 import PixelChip from "@/components/ui/PixelChip";
 import TerminalWindow from "@/components/ui/TerminalWindow";
+import StatusCard from "@/components/StatusCard";
+import type { ApplicationStatus } from "@/generated/prisma/client";
 import { dashboardStatus, contactLog } from "@/lib/placeholder-data";
 
 type DashboardProps = {
   fullName: string;
+  /** The signed-in hacker's own status, resolved server-side from their session. */
+  status: ApplicationStatus;
   diet: string;
   /** The hacker's own check-in QR, rendered server-side (src/lib/badge.ts). */
   badgeSvg: string;
 };
 
-export default function Dashboard({ fullName, diet, badgeSvg }: DashboardProps) {
+export default function Dashboard({ fullName, status, diet, badgeSvg }: DashboardProps) {
   // The waiver checklist row is the one interactive bit of static state
   // on this page (mirrors the mockup's toggle) — no persistence.
   const [waiverDone, setWaiverDone] = useState(false);
@@ -55,33 +59,24 @@ export default function Dashboard({ fullName, diet, badgeSvg }: DashboardProps) 
 
       <div className="flex flex-col items-start gap-7 lg:flex-row">
         <div className="flex w-full flex-col gap-6 lg:w-[440px] lg:shrink-0">
-          <PixelCard borderColor="var(--color-accent-teal)" className="p-6.5">
-            <span className="font-pixel text-[9px] tracking-widest text-accent-teal">// STATUS</span>
-            <div className="my-3.5 text-base font-bold text-accent-teal [text-shadow:0_0_14px_rgba(33,230,193,0.4)]">
-              {dashboardStatus.headline}
-            </div>
-            <div className="flex flex-col gap-3">
-              {dashboardStatus.checklist.map((item) => (
-                <div key={item.label} className="flex items-center gap-2.5 text-xs text-text-dim">
-                  <span className="text-accent-teal">[x]</span>
-                  <span className="line-through">{item.label}</span>
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => setWaiverDone((v) => !v)}
-                className="nav-row flex items-center justify-between gap-2.5 p-0.5 text-left"
-              >
-                <div className="flex items-center gap-2.5 text-xs text-text-primary">
-                  <span className={waiverDone ? "text-accent-teal" : "text-accent-amber"}>
-                    {waiverDone ? "[x]" : "[ ]"}
-                  </span>
-                  <span className={waiverDone ? "line-through" : ""}>Complete liability waiver</span>
-                </div>
-                <span className="text-[11px] font-bold text-accent-amber">{waiverDone ? "DONE" : "RUN >"}</span>
-              </button>
-            </div>
-          </PixelCard>
+          {/* The real status (PLAT-45). The old placeholder ticked off
+              "Confirm attendance" for everyone, which nobody had done. The
+              waiver row is still local-only state until waivers are real. */}
+          <StatusCard status={status}>
+            <button
+              type="button"
+              onClick={() => setWaiverDone((v) => !v)}
+              className="nav-row flex items-center justify-between gap-2.5 p-0.5 text-left"
+            >
+              <div className="flex items-center gap-2.5 text-xs text-text-primary">
+                <span className={waiverDone ? "text-accent-teal" : "text-accent-amber"}>
+                  {waiverDone ? "[x]" : "[ ]"}
+                </span>
+                <span className={waiverDone ? "line-through" : ""}>Complete liability waiver</span>
+              </div>
+              <span className="text-[11px] font-bold text-accent-amber">{waiverDone ? "DONE" : "RUN >"}</span>
+            </button>
+          </StatusCard>
 
           <PixelCard borderColor="var(--color-accent-purple)" className="flex flex-col items-center p-7.5">
             <span className="self-start font-pixel text-[9px] tracking-widest text-accent-purple-light">
