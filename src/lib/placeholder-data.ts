@@ -24,15 +24,9 @@ export const navItems: NavItem[] = [
 
 export const dashboardStatus = {
   eventName: "HACKJAM '26",
-  headline: "ACCEPTED",
   dateVenue: "[DATE] at [VENUE]",
-  checklist: [
-    { label: "Confirm attendance", done: true },
-    { label: "Join Discord", done: true },
-    // Waiver is intentionally not in this static list — the dashboard
-    // page renders it separately since it's the one interactive
-    // (useState) checklist row in this mockup.
-  ],
+  // The status headline and the fake "done" checklist are gone: the dashboard
+  // shows the hacker's real status now (src/components/StatusCard.tsx).
 };
 
 export const contactLog = [
