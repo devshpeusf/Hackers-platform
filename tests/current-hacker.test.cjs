@@ -21,7 +21,7 @@ function setup(overrides = {}) {
     },
     error: null,
     person: { id: "person-a", firstName: "Alex", lastName: "Smith", email: "alex@example.test", phoneNum: "555" },
-    application: { status: "ACCEPTED", school: "School", major: "Major", graduation: "2027-05", shirtSize: "M", gender: null, diet: "No restriction" },
+    application: { status: "ACCEPTED", rsvpStatus: "PENDING", school: "School", major: "Major", graduation: "2027-05", shirtSize: "M", gender: null, diet: "No restriction" },
     ...overrides,
   };
   const modules = {
@@ -107,6 +107,15 @@ test("separate users resolve separate Person/application scopes", async () => {
   assert.equal(first.calls[1][1].where.personId, "person-a");
   assert.equal(second.calls[1][1].where.personId, "person-b");
 });
+
+for (const rsvpStatus of ["PENDING", "CONFIRMED", "DECLINED"]) {
+  test(`ACCEPTED with ${rsvpStatus} uses the approved portal access rule`, async () => {
+    const s = setup({ application: { status: "ACCEPTED", rsvpStatus } });
+    if (rsvpStatus === "DECLINED") await assert.rejects(s.getCurrentHacker(), /REDIRECT:\/apply\/status/);
+    else assert.equal((await s.getCurrentHacker()).application.rsvpStatus, rsvpStatus);
+    assert.equal(s.calls[1][1].select.rsvpStatus, true);
+  });
+}
 
 test("every portal page checks access independently of the shared layout", () => {
   for (const route of ["dashboard", "profile", "team", "guide", "schedule", "help"]) {

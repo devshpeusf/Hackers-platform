@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
-import type { ApplicationStatus } from "@/generated/prisma/client";
+import type { ApplicationStatus, RsvpStatus } from "@/generated/prisma/client";
 import PixelCard from "@/components/ui/PixelCard";
 import { getStatusCardContent } from "@/lib/status-card";
 
@@ -20,14 +20,16 @@ import { getStatusCardContent } from "@/lib/status-card";
  */
 export default function StatusCard({
   status,
+  rsvpStatus,
   children,
   className,
 }: {
   status: ApplicationStatus | null;
+  rsvpStatus?: RsvpStatus;
   children?: ReactNode;
   className?: string;
 }) {
-  const content = getStatusCardContent(status);
+  const content = getStatusCardContent(status, rsvpStatus);
 
   return (
     <PixelCard borderColor={content.color} className={className ?? "p-6.5"}>

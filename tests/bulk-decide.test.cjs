@@ -71,21 +71,22 @@ function setup({ organizer = true, apps } = {}) {
     application: {
       findMany: async ({ where }) => {
         log.findWhere = where;
-        return db.apps.filter((a) => where.id.in.includes(a.id) && a.eventId === where.eventId);
+        return db.apps.filter((a) => where.id.in.includes(a.id) && a.eventId === where.eventId).map((a) => ({ ...a }));
       },
-      updateMany: async ({ where, data }) => {
+      updateManyAndReturn: async ({ where, data }) => {
         log.updateWhere = where;
         log.updateData = data;
-        let count = 0;
+        const updated = [];
         for (const a of db.apps) {
           if (where.id.in.includes(a.id) && a.eventId === where.eventId && a.status !== where.status.not) {
             Object.assign(a, data);
-            count++;
+            updated.push({ id: a.id });
           }
         }
-        return { count };
+        return updated;
       },
     },
+    $queryRaw: async () => [],
     $transaction: async (fn) => { log.transactions++; return fn(prisma); },
   };
 
@@ -100,6 +101,8 @@ function setup({ organizer = true, apps } = {}) {
     } } }) } }) },
     "@/lib/supabase/user": userLib,
     "@/lib/decisions": decisions,
+    "@/lib/rsvp": { revokeRsvpTokens: () => assert.fail("No accepted withdrawal in these fixtures") },
+    "@/lib/site-url": {},
   });
   return { actions, db, log };
 }

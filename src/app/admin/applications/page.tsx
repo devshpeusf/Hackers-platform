@@ -5,8 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { requireOrganizer } from "@/lib/organizer";
 import PixelChip from "@/components/ui/PixelChip";
 import SearchBox from "./search-box";
-import type { ApplicationStatus } from "@/generated/prisma/client";
-import { STATUS_STYLE, STATUSES, parseStatus } from "./status";
+import type { ApplicationStatus, RsvpStatus } from "@/generated/prisma/client";
+import { STATUS_STYLE, STATUSES, parseStatus, RSVP_LABEL } from "./status";
 import { DECISIONS, decisionLocked, needsAnnouncement } from "@/lib/decisions";
 import { decideApplication } from "./actions";
 import { BulkDecideBar, SelectAll } from "./bulk-decide";
@@ -181,7 +181,7 @@ export default async function AdminApplicationsPage({
 
   const [counts, rows, decided] = await Promise.all([
     prisma.application.groupBy({
-      by: ["status"],
+      by: ["status", "rsvpStatus"],
       where: { eventId: event.id },
       _count: { _all: true },
     }),
@@ -191,6 +191,7 @@ export default async function AdminApplicationsPage({
       select: {
         id: true,
         status: true,
+        rsvpStatus: true,
         school: true,
         levelOfStudy: true,
         createdAt: true,
@@ -212,7 +213,11 @@ export default async function AdminApplicationsPage({
   const unannounced = decided.filter((d) => needsAnnouncement(d.status, d.emailQueue)).length;
 
   const countByStatus = Object.fromEntries(STATUSES.map((s) => [s, 0])) as Record<(typeof STATUSES)[number], number>;
-  for (const c of counts) countByStatus[c.status] = c._count._all;
+  const rsvpCounts: Record<RsvpStatus, number> = { PENDING: 0, CONFIRMED: 0, DECLINED: 0 };
+  for (const c of counts) {
+    countByStatus[c.status] += c._count._all;
+    if (c.status === "ACCEPTED") rsvpCounts[c.rsvpStatus] += c._count._all;
+  }
   const total = STATUSES.reduce((sum, s) => sum + countByStatus[s], 0);
   const filtered = Boolean(q || status);
 
@@ -241,6 +246,23 @@ export default async function AdminApplicationsPage({
           </Link>
         ))}
       </div>
+
+      <section aria-label="Accepted applicant RSVPs" className="mb-5 border-2 border-border-default p-4">
+        <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {([
+            ["Accepted offers", countByStatus.ACCEPTED],
+            ["Awaiting RSVP", rsvpCounts.PENDING],
+            ["Confirmed", rsvpCounts.CONFIRMED],
+            ["Declined", rsvpCounts.DECLINED],
+          ] as const).map(([label, value]) => (
+            <div key={label}>
+              <dt className="text-[11px] text-text-muted">{label}</dt>
+              <dd className="mt-1 text-lg font-bold tabular-nums text-text-primary">{value}</dd>
+            </div>
+          ))}
+        </dl>
+        <p className="mt-3 text-[11px] text-text-faintest">Confirmed and declined responses are included in accepted offers.</p>
+      </section>
 
       <BulkResult params={params} />
 
@@ -331,6 +353,9 @@ export default async function AdminApplicationsPage({
                     <span className="hidden truncate md:block">{SHORT_LEVEL[r.levelOfStudy] ?? r.levelOfStudy}</span>
                     <span>
                       <PixelChip color={STATUS_STYLE[r.status].color}>{STATUS_STYLE[r.status].label}</PixelChip>
+                      {r.status === "ACCEPTED" && (
+                        <span className="mt-1 block text-[10px] text-text-muted">{RSVP_LABEL[r.rsvpStatus]}</span>
+                      )}
                     </span>
                     <span className="text-right tabular-nums text-text-muted">{formatApplied(r.createdAt)}</span>
                     {/* Reserves the DECIDE column so row text never runs under

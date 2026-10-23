@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { toApplicantIdentity } from "@/lib/supabase/user";
+import { revokeRsvpTokens } from "@/lib/rsvp";
+import { getRsvpBaseUrl } from "@/lib/site-url";
 import {
   BULK_LIMIT,
   DECISIONS,
@@ -14,6 +16,7 @@ import {
   needsAnnouncement,
   parseDecision,
   planBulkDecision,
+  canQueueRsvpInvitation,
 } from "@/lib/decisions";
 import type { EmailType } from "@/generated/prisma/client";
 
@@ -38,10 +41,8 @@ import type { EmailType } from "@/generated/prisma/client";
  */
 async function currentOrganizer(): Promise<{ id: string } | null> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error || !user) return null;
 
   // Verified Discord id only — see verifiedDiscordId for why not metadata.
   const { discordId } = toApplicantIdentity(user);
@@ -91,6 +92,9 @@ export async function decideApplication(formData: FormData) {
   // flipping a decision while its email is already going out — is the worst
   // thing this feature can do, and the guard is nearly free.
   const result = await prisma.$transaction(async (tx) => {
+    // Same row lock as RSVP issuance, revocation and public responses. Read
+    // the decision only after waiting so a concurrent change cannot be missed.
+    await tx.$queryRaw`SELECT "id" FROM "Application" WHERE "id" = ${id} FOR UPDATE`;
     const application = await tx.application.findUnique({
       where: { id },
       select: {
@@ -106,10 +110,31 @@ export async function decideApplication(formData: FormData) {
       return "locked" as const;
     }
 
-    await tx.application.update({
-      where: { id },
-      data: { status: decision, decidedById: organizer.id, decidedAt: new Date() },
+    const updated = await tx.application.updateMany({
+      where: {
+        id, status: application.status,
+        ...(!override && {
+          NOT: { OR: DECISIONS.map((d) => ({
+            status: d,
+            emailQueue: { some: { emailType: emailTypeFor(d), status: { in: ["SENT", "SENDING"] } } },
+          })) },
+        }),
+      },
+      data: {
+        status: decision, decidedById: organizer.id, decidedAt: new Date(),
+        ...(decision === "ACCEPTED" && { rsvpStatus: "PENDING", rsvpRespondedAt: null }),
+      },
     });
+    if (updated.count !== 1) return "locked" as const;
+    if (application.status === "ACCEPTED") {
+      await revokeRsvpTokens(id, tx);
+      // Don't let an old pending email automatically invite them again after
+      // re-acceptance. SENDING is left to the already-running worker.
+      await tx.emailQueue.updateMany({
+        where: { applicationId: id, emailType: "ACCEPTED", status: "PENDING" },
+        data: { status: "FAILED", lastError: "Acceptance withdrawn. Review the decision before queueing another invitation." },
+      });
+    }
     return "ok" as const;
   });
 
@@ -153,6 +178,12 @@ export async function decideApplications(formData: FormData) {
   if (!event) return;
 
   const result = await prisma.$transaction(async (tx) => {
+    // Consistent lock order avoids deadlocks between overlapping bulk actions.
+    await tx.$queryRaw`
+      SELECT "id" FROM "Application"
+      WHERE "id" = ANY(${ids}::text[]) AND "eventId" = ${event.id}
+      ORDER BY "id" FOR UPDATE
+    `;
     const applications = await tx.application.findMany({
       where: { id: { in: ids }, eventId: event.id },
       select: {
@@ -168,7 +199,7 @@ export async function decideApplications(formData: FormData) {
     // if a decision email goes out, or someone else decides one of these,
     // between the read and here, that row is left alone rather than flipped.
     const updated = plan.toChange.length
-      ? await tx.application.updateMany({
+      ? await tx.application.updateManyAndReturn({
           where: {
             id: { in: plan.toChange.map((a) => a.id) },
             eventId: event.id,
@@ -180,14 +211,36 @@ export async function decideApplications(formData: FormData) {
               })),
             },
           },
-          data: { status: decision, decidedById: organizer.id, decidedAt: new Date() },
+          data: {
+            status: decision, decidedById: organizer.id, decidedAt: new Date(),
+            ...(decision === "ACCEPTED" && { rsvpStatus: "PENDING", rsvpRespondedAt: null }),
+          },
+          select: { id: true },
         })
-      : { count: 0 };
+      : [];
+
+    const changedIds = new Set(updated.map((a) => a.id));
+    const withdrawn = applications
+      .filter((a) => a.status === "ACCEPTED" && changedIds.has(a.id))
+      .map((a) => a.id);
+    if (withdrawn.length) {
+      const now = new Date();
+      // All application locks are already held. Revoke in one write, and
+      // only for the ACCEPTED rows returned by the guarded decision update.
+      await tx.rsvpToken.updateMany({
+        where: { applicationId: { in: withdrawn }, revokedAt: null, expiresAt: { gt: now } },
+        data: { revokedAt: now },
+      });
+      await tx.emailQueue.updateMany({
+        where: { applicationId: { in: withdrawn }, emailType: "ACCEPTED", status: "PENDING" },
+        data: { status: "FAILED", lastError: "Acceptance withdrawn. Review the decision before queueing another invitation." },
+      });
+    }
 
     return {
-      changed: updated.count,
+      changed: updated.length,
       unchanged: plan.unchanged.length,
-      skipped: plan.locked.length + (plan.toChange.length - updated.count),
+      skipped: plan.locked.length + (plan.toChange.length - updated.length),
       ignored: ids.length - applications.length,
     };
   });
@@ -199,6 +252,42 @@ export async function decideApplications(formData: FormData) {
   if (result.skipped) params.set("skipped", String(result.skipped));
   if (result.ignored) params.set("ignored", String(result.ignored));
   redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}${params}`);
+}
+
+/** Explicit organizer send for a new acceptance cycle; never called by deciding. */
+export async function queueRsvpInvitation(formData: FormData) {
+  const id = formData.get("id");
+  if (typeof id !== "string" || !id) return;
+  if (!(await currentOrganizer())) return;
+  const back = `/admin/applications/${encodeURIComponent(id)}`;
+  try {
+    getRsvpBaseUrl(process.env.RSVP_URL);
+  } catch {
+    redirect(`${back}?invitation=blocked`);
+  }
+
+  const queued = await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "Application" WHERE "id" = ${id} FOR UPDATE`;
+    const application = await tx.application.findUnique({
+      where: { id },
+      select: {
+        status: true, rsvpStatus: true, decidedAt: true,
+        emailQueue: { select: { emailType: true, status: true, sentAt: true } },
+        rsvpTokens: { select: { revokedAt: true, expiresAt: true } },
+      },
+    });
+    const now = new Date();
+    if (!application || !canQueueRsvpInvitation(application, now)) return false;
+    const updated = await tx.emailQueue.updateMany({
+      where: { applicationId: id, emailType: "ACCEPTED", status: { in: ["SENT", "FAILED"] } },
+      data: { status: "PENDING", attempts: 0, sentAt: null, lastError: null, createdAt: now },
+    });
+    return updated.count === 1;
+  });
+  revalidatePath("/admin/applications");
+  revalidatePath("/admin/email-queue");
+  revalidatePath(back);
+  redirect(`${back}?invitation=${queued ? "queued" : "unchanged"}`);
 }
 
 /**

@@ -1,4 +1,8 @@
-import type { ApplicationStatus } from "@/generated/prisma/client";
+import type { ApplicationStatus, RsvpStatus } from "@/generated/prisma/client";
+
+export const RSVP_LABEL: Record<RsvpStatus, string> = {
+  PENDING: "RSVP PENDING", CONFIRMED: "CONFIRMED", DECLINED: "DECLINED",
+};
 
 /**
  * Display rules for ApplicationStatus, shared by the list and detail pages so

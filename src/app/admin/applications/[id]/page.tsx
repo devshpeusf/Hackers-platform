@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ApplicationStatus } from "@/generated/prisma/client";
+import type { ApplicationStatus, RsvpStatus } from "@/generated/prisma/client";
 import clsx from "@/lib/clsx";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -8,14 +8,15 @@ import { applicationCopy } from "@/lib/placeholder-data";
 import PixelCard from "@/components/ui/PixelCard";
 import PixelChip from "@/components/ui/PixelChip";
 import Field from "@/components/ui/Field";
-import { STATUS_STYLE } from "../status";
+import { STATUS_STYLE, RSVP_LABEL } from "../status";
 import {
   DECISIONS,
   announcedEmail,
   announcementBlockedReason,
   needsAnnouncement,
+  canQueueRsvpInvitation,
 } from "@/lib/decisions";
-import { decideApplication, queueDecisionEmails } from "../actions";
+import { decideApplication, queueDecisionEmails, queueRsvpInvitation } from "../actions";
 
 /**
  * One application in full, for an organizer, and where their decision gets
@@ -45,6 +46,9 @@ function DecisionPanel({
   blockedReason,
   outcome,
   justQueued,
+  rsvpStatus,
+  freshInvitation,
+  invitation,
 }: {
   id: string;
   status: ApplicationStatus;
@@ -55,6 +59,9 @@ function DecisionPanel({
   blockedReason: string | null;
   outcome?: string;
   justQueued: boolean;
+  rsvpStatus: RsvpStatus;
+  freshInvitation: boolean;
+  invitation?: string;
 }) {
   const buttons = (
     <div className="flex flex-wrap gap-2.5">
@@ -121,10 +128,27 @@ function DecisionPanel({
         buttons
       )}
 
+      {status === "ACCEPTED" && (
+        <div className="mt-5 space-y-3 border-t border-text-primary/8 pt-4 text-[12px] leading-[1.7] text-text-muted">
+          <p>Attendance: <strong className="text-text-primary">{RSVP_LABEL[rsvpStatus]}</strong></p>
+          {invitation === "queued" && <p role="status">New invitation queued for the next scheduler run.</p>}
+          {invitation === "blocked" && <p role="alert">Invitation not queued. Check the RSVP email configuration.</p>}
+          {freshInvitation && (
+            <form action={queueRsvpInvitation}>
+              <input type="hidden" name="id" value={id} />
+              <button type="submit" className="pixel-btn-outline bg-surface-bg px-4 py-2.5 font-body text-[11px] font-bold tracking-wide text-text-primary">
+                QUEUE NEW RSVP INVITATION
+              </button>
+              <p className="mt-2 text-[11px] text-text-faintest">Queues a fresh invitation for the next scheduler run.</p>
+            </form>
+          )}
+        </div>
+      )}
+
       {/* Whether this one person has been told, and the one-off send (PLAT-42).
           The batch path is /admin/applications/send; this is for a decision
           made after that batch went out. */}
-      {status !== "SUBMITTED" && !announced && (
+      {status !== "SUBMITTED" && !announced && !freshInvitation && (
         <div className="mt-5 border-t border-text-primary/8 pt-4">
           {justQueued ? (
             <p className="text-[12px] leading-[1.7] text-terminal-green">
@@ -180,11 +204,11 @@ export default async function AdminApplicationPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ decision?: string; queued?: string }>;
+  searchParams: Promise<{ decision?: string; queued?: string; invitation?: string }>;
 }) {
   await requireOrganizer();
   const { id } = await params;
-  const { decision: outcome, queued } = await searchParams;
+  const { decision: outcome, queued, invitation } = await searchParams;
 
   const a = await prisma.application.findUnique({
     where: { id },
@@ -193,6 +217,7 @@ export default async function AdminApplicationPage({
       event: true,
       decidedBy: { select: { firstName: true, lastName: true } },
       emailQueue: { select: { emailType: true, status: true, sentAt: true } },
+      rsvpTokens: { select: { revokedAt: true, expiresAt: true } },
     },
   });
   if (!a) notFound();
@@ -238,6 +263,9 @@ export default async function AdminApplicationPage({
           }
           outcome={outcome}
           justQueued={Number(queued) > 0}
+          rsvpStatus={a.rsvpStatus}
+          freshInvitation={canQueueRsvpInvitation(a, new Date())}
+          invitation={invitation}
         />
 
         <PixelCard className="p-0">
