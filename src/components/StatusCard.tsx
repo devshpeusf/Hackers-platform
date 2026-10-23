@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { ApplicationStatus, RsvpStatus } from "@/generated/prisma/client";
 import PixelCard from "@/components/ui/PixelCard";
 import { getStatusCardContent } from "@/lib/status-card";
+import RsvpButtons from "@/components/RsvpButtons";
 
 /**
  * The applicant's real status (PLAT-45), on the portal dashboard and on
@@ -52,6 +53,10 @@ export default function StatusCard({
           {content.action.label} &rarr;
         </Link>
       )}
+
+      {/* The buttons carry no id — the action resolves whose RSVP this is
+          from the session (src/app/rsvp/signed-in-actions.ts). */}
+      {content.rsvp && <RsvpButtons />}
 
       {children && <div className="mt-5 flex flex-col gap-3 border-t border-text-primary/8 pt-4">{children}</div>}
     </PixelCard>

@@ -19,6 +19,8 @@ export type StatusCardContent = {
   body: string;
   /** A link to act on, when there's something to do. */
   action?: { label: string; href: string };
+  /** Show the signed-in RSVP buttons (accepted, not yet answered). */
+  rsvp?: true;
 };
 
 const BY_STATUS: Record<ApplicationStatus, StatusCardContent> = {
@@ -63,6 +65,15 @@ export function getStatusCardContent(status: ApplicationStatus | null, rsvpStatu
     return {
       headline: "ACCEPTED · DECLINED", color: "var(--color-text-muted)",
       body: "You declined attendance. Portal access is unavailable. To request a change, contact the event organizers.",
+    };
+  }
+  // Only when the caller actually knows the RSVP is unanswered — a caller that
+  // passes no rsvpStatus gets the plain accepted card, never buttons.
+  if (status === "ACCEPTED" && rsvpStatus === "PENDING") {
+    return {
+      ...BY_STATUS.ACCEPTED,
+      body: "You're in! Confirm you're coming so we can hold your spot. You can also use the link in your acceptance email.",
+      rsvp: true,
     };
   }
   return status ? BY_STATUS[status] : NO_APPLICATION;

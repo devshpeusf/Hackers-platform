@@ -7,19 +7,21 @@ import PixelCard from "@/components/ui/PixelCard";
 import PixelChip from "@/components/ui/PixelChip";
 import TerminalWindow from "@/components/ui/TerminalWindow";
 import StatusCard from "@/components/StatusCard";
-import type { ApplicationStatus } from "@/generated/prisma/client";
+import type { ApplicationStatus, RsvpStatus } from "@/generated/prisma/client";
 import { dashboardStatus, contactLog } from "@/lib/placeholder-data";
 
 type DashboardProps = {
   fullName: string;
   /** The signed-in hacker's own status, resolved server-side from their session. */
   status: ApplicationStatus;
+  /** Their RSVP answer — without it a confirmed hacker would see "watch your email". */
+  rsvpStatus: RsvpStatus;
   diet: string;
   /** The hacker's own check-in QR, rendered server-side (src/lib/badge.ts). */
   badgeSvg: string;
 };
 
-export default function Dashboard({ fullName, status, diet, badgeSvg }: DashboardProps) {
+export default function Dashboard({ fullName, status, rsvpStatus, diet, badgeSvg }: DashboardProps) {
   // The waiver checklist row is the one interactive bit of static state
   // on this page (mirrors the mockup's toggle) — no persistence.
   const [waiverDone, setWaiverDone] = useState(false);
@@ -62,7 +64,7 @@ export default function Dashboard({ fullName, status, diet, badgeSvg }: Dashboar
           {/* The real status (PLAT-45). The old placeholder ticked off
               "Confirm attendance" for everyone, which nobody had done. The
               waiver row is still local-only state until waivers are real. */}
-          <StatusCard status={status}>
+          <StatusCard status={status} rsvpStatus={rsvpStatus}>
             <button
               type="button"
               onClick={() => setWaiverDone((v) => !v)}
