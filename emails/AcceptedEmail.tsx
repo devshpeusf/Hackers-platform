@@ -12,9 +12,8 @@ export type AcceptedEmailProps = {
   firstName: string;
   eventName: string;
   /**
-   * TODO(rsvp): RSVP isn't built yet. This comes from the RSVP_URL env var at
-   * send time (see src/app/api/jobs/send-queued/route.ts) and must point at a
-   * real RSVP page before any ACCEPTED email goes out.
+   * Final applicant-specific public URL, assembled by the send worker from
+   * the trusted RSVP_URL base and a fresh credential. No internal IDs/hashes.
    */
   rsvpUrl: string;
   /** Same link the confirmation email uses — Event.organizerHqUrl. */
@@ -61,7 +60,7 @@ export default function AcceptedEmail({ firstName, eventName, rsvpUrl, organizer
 AcceptedEmail.PreviewProps = {
   firstName: "Mariana",
   eventName: "HackJam '26",
-  // TODO(rsvp): placeholder until the RSVP page exists.
-  rsvpUrl: process.env.RSVP_URL || "https://apply.hackjam26.com/rsvp",
+  // Reserved, nonfunctional domain and deliberately invalid credential.
+  rsvpUrl: "https://example.invalid/rsvp/preview-not-a-credential",
   organizerHqUrl: "https://events.mlh.com/events/14412-hackjam-26?intent=register",
 } satisfies AcceptedEmailProps;

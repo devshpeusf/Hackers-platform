@@ -56,6 +56,51 @@ gitignored — every teammate generates their own copy, it's never committed).
 `prisma migrate dev` applies any migrations already in `prisma/migrations/`
 that aren't in your database yet.
 
+## Acceptance email RSVP links
+
+`RSVP_URL` is a trusted base URL such as `https://apply.hackjam26.com/rsvp`,
+with no applicant credential, query string, fragment, or username/password.
+Trailing slashes are normalized. HTTPS is required except for loopback HTTP
+development URLs such as `http://localhost:3000/rsvp`. The worker does not
+derive email links from request headers. No environment files are changed by
+this integration; configure the base in the deployment environment.
+
+Only a claimed ACCEPTED email send issues a credential. Its SHA-256 hash is
+committed before sending, and the template receives the final `/rsvp/<token>`
+URL. Queueing decisions and rendering previews never issue credentials.
+Previews use an intentionally nonfunctional `example.invalid` URL.
+
+Retries issue fresh credentials without invalidating earlier links, since a
+provider/network failure may follow successful delivery. Rate/quota responses
+are only known after the provider call; that attempt's token remains stored,
+and the existing queue retry policy leaves its attempt counter unchanged.
+Other failures retain the existing three-failure retry limit.
+
+The worker rechecks ACCEPTED before issuance and immediately before dispatch.
+A stale or missing application moves its acceptance queue row to FAILED for
+organizer review, without incrementing attempts or marking it sent. The
+existing RETRY action can retry it after its decision is reviewed. No network
+request runs inside the token transaction. An explicit organizer override
+after dispatch begins cannot recall an email already handed to the provider;
+the RSVP resolver still checks the application's current admission status.
+
+Withdrawing acceptance revokes active RSVP credentials in the same transaction
+as the decision, for both individual and bulk changes. An unsent PENDING
+acceptance email is parked in FAILED for review. The previous RSVP response
+and timestamp remain until a non-ACCEPTED application becomes ACCEPTED again;
+that transition resets them to PENDING and null. An ACCEPTED-to-ACCEPTED no-op
+does not reset the response. There is no separate archive of prior responses.
+
+After re-acceptance, an organizer can explicitly queue a new RSVP invitation
+from the application detail page, reusing its existing acceptance email row.
+The decision itself does not queue a new email. Old links remain revoked,
+and the worker checks the acceptance cycle and token again before dispatch.
+
+Organizer RSVP counts cover only the latest event's accepted offers. Pending,
+confirmed, and declined are subsets of that total. Portal access requires
+ACCEPTED with PENDING or CONFIRMED attendance; declined applicants go to their
+own application status page.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

@@ -1,4 +1,4 @@
-import type { ApplicationStatus } from "@/generated/prisma/client";
+import type { ApplicationStatus, RsvpStatus } from "@/generated/prisma/client";
 
 /**
  * What the applicant's status card says in each state (PLAT-45) — shared by
@@ -7,9 +7,8 @@ import type { ApplicationStatus } from "@/generated/prisma/client";
  * Plain data, no JSX, so it's easy to test and the one place to edit wording.
  * Tone matches the decision emails in emails/.
  *
- * TODO(rsvp): when RSVP lands, add CONFIRMED here (the Record type will
- * demand it once the enum has it) and give ACCEPTED an action pointing at the
- * RSVP page instead of "watch your email". See the RSVP ticket.
+ * RSVP remains separate from the admission decision. Callers that supply it
+ * can show the recorded response without exposing an ID or a bearer link.
  */
 
 export type StatusCardContent = {
@@ -53,6 +52,18 @@ const NO_APPLICATION: StatusCardContent = {
 };
 
 /** `null` means signed in but no application on file. */
-export function getStatusCardContent(status: ApplicationStatus | null): StatusCardContent {
+export function getStatusCardContent(status: ApplicationStatus | null, rsvpStatus?: RsvpStatus): StatusCardContent {
+  if (status === "ACCEPTED" && rsvpStatus === "CONFIRMED") {
+    return {
+      headline: "ACCEPTED · CONFIRMED", color: "var(--color-accent-teal)",
+      body: "Your attendance is confirmed. To request a change, contact the event organizers.",
+    };
+  }
+  if (status === "ACCEPTED" && rsvpStatus === "DECLINED") {
+    return {
+      headline: "ACCEPTED · DECLINED", color: "var(--color-text-muted)",
+      body: "You declined attendance. Portal access is unavailable. To request a change, contact the event organizers.",
+    };
+  }
   return status ? BY_STATUS[status] : NO_APPLICATION;
 }

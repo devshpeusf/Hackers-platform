@@ -34,6 +34,20 @@ test("each state says what it should", () => {
   assert.equal(getStatusCardContent("REJECTED").headline, "NOT THIS TIME");
 });
 
+test("accepted confirmed/declined cards preserve admission while accurately showing attendance", () => {
+  for (const rsvpStatus of ["CONFIRMED", "DECLINED"]) {
+    const content = getStatusCardContent("ACCEPTED", rsvpStatus);
+    assert.equal(content.headline, `ACCEPTED · ${rsvpStatus}`);
+    assert.doesNotMatch(content.body, /Watch your email|confirm your spot/);
+    assert.match(content.body, /contact the event organizers/);
+  }
+  assert.match(getStatusCardContent("ACCEPTED", "DECLINED").body, /Portal access is unavailable/);
+  assert.equal(getStatusCardContent("ACCEPTED", "PENDING").headline, "ACCEPTED");
+  for (const decision of ["SUBMITTED", "WAITLISTED", "REJECTED"]) {
+    assert.equal(getStatusCardContent(decision, "CONFIRMED").headline, getStatusCardContent(decision).headline);
+  }
+});
+
 test("no application prompts to apply", () => {
   const content = getStatusCardContent(null);
   assert.equal(content.headline, "NOT APPLIED YET");

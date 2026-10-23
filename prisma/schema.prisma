@@ -95,6 +95,11 @@ model Application {
 
   status ApplicationStatus @default(SUBMITTED)
 
+  /// Attendance response, separate from the organizer's admission decision.
+  /// Only meaningful while status is ACCEPTED. Public responses are final.
+  rsvpStatus      RsvpStatus @default(PENDING)
+  rsvpRespondedAt DateTime?
+
   /// Who marked the decision, and when (PLAT-39). Null while still SUBMITTED —
   /// and on the one row decided by hand in the database before this existed.
   ///
@@ -161,8 +166,31 @@ model Application {
   // later — see EmailQueue below).
   emailQueue EmailQueue[]
 
+  /// Retries may issue multiple RSVP links, each scoped to this application.
+  rsvpTokens RsvpToken[]
+
   // Every person can only submit one application to each event
   @@unique([personId, eventId])
+}
+
+/// Public RSVP credentials. Only hashes are stored; raw tokens exist in the
+/// emailed links. These are separate from badge and authentication tokens.
+model RsvpToken {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  tokenHash String @unique
+
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  /// Set to the event's start when issuing the invitation.
+  expiresAt DateTime
+  /// Invalidates an invitation, for example when acceptance is withdrawn.
+  revokedAt DateTime?
+
+  /// Nonunique: all links for an application must be findable for revocation.
+  @@index([applicationId])
 }
 
 /// A send queue for transactional email, so a Resend failure — or hitting
@@ -230,6 +258,12 @@ enum ApplicationStatus {
   ACCEPTED
   REJECTED
   WAITLISTED
+}
+
+enum RsvpStatus {
+  PENDING
+  CONFIRMED
+  DECLINED
 }
 
 enum SchoolSource {

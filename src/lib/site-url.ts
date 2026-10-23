@@ -32,3 +32,25 @@ export function getSiteOrigin(request: Request): string {
 
   return new URL(request.url).origin;
 }
+
+/** Background email links use trusted configuration, never request headers. */
+export function getRsvpBaseUrl(configured: string | undefined): string {
+  const invalid = () => new Error("RSVP_URL must be an absolute HTTPS URL ending in /rsvp (HTTP is allowed on loopback hosts)");
+  const value = configured?.trim();
+  if (!value || !/^https?:\/\//i.test(value) || /[\u0000-\u0020\u007f]/.test(value)) throw invalid();
+
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    // URL parser exceptions can contain the input, including embedded secrets.
+    throw invalid();
+  }
+  const localHttp = url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+  if (
+    (url.protocol !== "https:" && !localHttp) || url.username || url.password || url.search || url.hash ||
+    url.pathname.replace(/\/+$/, "") !== "/rsvp"
+  ) throw invalid();
+
+  return `${url.origin}/rsvp`;
+}

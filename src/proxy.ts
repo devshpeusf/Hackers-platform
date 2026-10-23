@@ -1,4 +1,4 @@
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
 /**
@@ -9,6 +9,15 @@ import { updateSession } from "@/lib/supabase/middleware";
  * convention for the file, not Next's.
  */
 export async function proxy(request: NextRequest) {
+  // RSVP is authorized solely by its bearer token, even with no auth cookies
+  // or an unavailable Supabase Auth service. Keep all other route gates intact.
+  if (request.nextUrl.pathname === "/rsvp" || request.nextUrl.pathname.startsWith("/rsvp/")) {
+    const response = NextResponse.next();
+    response.headers.set("Cache-Control", "private, no-store, max-age=0");
+    response.headers.set("Referrer-Policy", "no-referrer");
+    response.headers.set("X-Robots-Tag", "noindex, nofollow");
+    return response;
+  }
   return updateSession(request);
 }
 

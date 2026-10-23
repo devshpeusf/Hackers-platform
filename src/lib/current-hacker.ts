@@ -8,6 +8,7 @@ import { toApplicantIdentity } from "@/lib/supabase/user";
 
 // Extend this list when a future ticket adds another admitted status.
 const ADMITTED_STATUSES: readonly string[] = ["ACCEPTED"];
+const PORTAL_RSVP_STATUSES: readonly string[] = ["PENDING", "CONFIRMED"];
 
 /** Request-local lookup. No caller-supplied IDs and no cross-user cache. */
 export const getCurrentHacker = cache(async () => {
@@ -44,6 +45,7 @@ export const getCurrentHacker = cache(async () => {
       // Pages must not pass it on to client components.
       id: true,
       status: true,
+      rsvpStatus: true,
       school: true,
       major: true,
       graduation: true,
@@ -53,7 +55,9 @@ export const getCurrentHacker = cache(async () => {
     },
   });
   if (!application) redirect("/apply/form");
-  if (!ADMITTED_STATUSES.includes(application.status)) redirect("/apply/status");
+  if (!ADMITTED_STATUSES.includes(application.status) || !PORTAL_RSVP_STATUSES.includes(application.rsvpStatus)) {
+    redirect("/apply/status");
+  }
 
   return {
     person: {

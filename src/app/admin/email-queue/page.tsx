@@ -40,7 +40,7 @@ export default async function EmailQueuePage() {
     }),
   ]);
 
-  
+
   const countByStatus = { PENDING: 0, SENDING: 0, SENT: 0, FAILED: 0 };
   for (const row of counts) countByStatus[row.status] = row._count.status;
 

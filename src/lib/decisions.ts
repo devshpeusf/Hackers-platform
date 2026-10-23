@@ -1,4 +1,4 @@
-import type { ApplicationStatus, EmailType, EmailStatus } from "@/generated/prisma/client";
+import type { ApplicationStatus, EmailType, EmailStatus, RsvpStatus } from "@/generated/prisma/client";
 
 /**
  * The rules behind marking a decision (PLAT-39).
@@ -115,6 +115,28 @@ export function needsAnnouncement(
   const expected = emailTypeFor(status);
   if (!expected) return false;
   return !emails.some((e) => e.emailType === expected);
+}
+
+/** Reuse the existing acceptance row only through an explicit organizer send. */
+export function canQueueRsvpInvitation(application: {
+  status: ApplicationStatus;
+  rsvpStatus: RsvpStatus;
+  decidedAt: Date | null;
+  emailQueue: readonly QueuedEmail[];
+  rsvpTokens: readonly { revokedAt: Date | null; expiresAt: Date }[];
+}, now: Date): boolean {
+  if (application.status !== "ACCEPTED" || application.rsvpStatus !== "PENDING" || !application.decidedAt) return false;
+  const email = application.emailQueue.find((e) => e.emailType === "ACCEPTED");
+  if (!email || email.status === "PENDING" || email.status === "SENDING") return false;
+  if (email.status === "FAILED") return true; // Same deliberate retry already offered on the queue page.
+
+  const hasActiveToken = application.rsvpTokens.some((t) => !t.revokedAt && t.expiresAt > now);
+  // The revoked-token check also covers an old in-flight send completing after
+  // re-acceptance. No active credential from a new send may be duplicated here.
+  return !hasActiveToken && (
+    (email.sentAt !== null && email.sentAt < application.decidedAt) ||
+    application.rsvpTokens.some((t) => t.revokedAt !== null)
+  );
 }
 
 /**

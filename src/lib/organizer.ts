@@ -33,10 +33,8 @@ export async function isOrganizer(discordId: string | null): Promise<boolean> {
  */
 export async function requireOrganizer() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/auth/signin");
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error || !user) redirect("/auth/signin");
 
   const identity = toApplicantIdentity(user);
   if (!(await isOrganizer(identity.discordId))) notFound();
