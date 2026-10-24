@@ -22,13 +22,22 @@ const plain = (x) => JSON.parse(JSON.stringify(x));
 
 // ---- the card ----
 
-const { getStatusCardContent } = load("src/lib/status-card.ts", {});
+const { getStatusCardContent, formatEventDates } = load("src/lib/status-card.ts", {});
 
 test("accepted and unanswered shows the RSVP buttons", () => {
   const content = getStatusCardContent("ACCEPTED", "PENDING");
   assert.equal(content.rsvp, true);
   assert.equal(content.headline, "ACCEPTED");
-  assert.match(content.body, /Confirm you're coming/);
+  assert.match(content.body, /Let us know if you're coming/);
+});
+
+test("event dates read naturally, in Tampa time", () => {
+  // The real seed values: 9am and 6pm UTC — the same calendar days in Tampa.
+  assert.equal(formatEventDates(new Date("2026-11-07T09:00:00Z"), new Date("2026-11-08T18:00:00Z")), "Nov 7–8");
+  assert.equal(formatEventDates(new Date("2026-10-31T14:00:00Z"), new Date("2026-11-01T20:00:00Z")), "Oct 31 – Nov 1");
+  assert.equal(formatEventDates(new Date("2026-11-07T14:00:00Z"), new Date("2026-11-07T22:00:00Z")), "Nov 7");
+  // 2am UTC on the 8th is still the evening of the 7th in Tampa.
+  assert.equal(formatEventDates(new Date("2026-11-08T02:00:00Z"), new Date("2026-11-08T02:00:00Z")), "Nov 7");
 });
 
 test("no buttons once answered, for any other status, or when RSVP isn't known", () => {
@@ -45,7 +54,7 @@ test("the dashboard passes the RSVP answer, so confirmed hackers see it there to
   const page = readFileSync("src/app/(app)/dashboard/page.tsx", "utf8");
   assert.match(page, /rsvpStatus=\{application\.rsvpStatus\}/);
   const dashboard = readFileSync("src/app/(app)/dashboard/Dashboard.tsx", "utf8");
-  assert.match(dashboard, /<StatusCard status=\{status\} rsvpStatus=\{rsvpStatus\}>/);
+  assert.match(dashboard, /<StatusCard status=\{status\} rsvpStatus=\{rsvpStatus\} event=\{event\}>/);
 });
 
 // ---- recording the answer ----

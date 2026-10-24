@@ -16,12 +16,14 @@ type DashboardProps = {
   status: ApplicationStatus;
   /** Their RSVP answer — without it a confirmed hacker would see "watch your email". */
   rsvpStatus: RsvpStatus;
+  /** Name and dates, for the status card's wording. */
+  event: { name: string; startDate: Date; endDate: Date };
   diet: string;
   /** The hacker's own check-in QR, rendered server-side (src/lib/badge.ts). */
   badgeSvg: string;
 };
 
-export default function Dashboard({ fullName, status, rsvpStatus, diet, badgeSvg }: DashboardProps) {
+export default function Dashboard({ fullName, status, rsvpStatus, event, diet, badgeSvg }: DashboardProps) {
   // The waiver checklist row is the one interactive bit of static state
   // on this page (mirrors the mockup's toggle) — no persistence.
   const [waiverDone, setWaiverDone] = useState(false);
@@ -64,7 +66,7 @@ export default function Dashboard({ fullName, status, rsvpStatus, diet, badgeSvg
           {/* The real status (PLAT-45). The old placeholder ticked off
               "Confirm attendance" for everyone, which nobody had done. The
               waiver row is still local-only state until waivers are real. */}
-          <StatusCard status={status} rsvpStatus={rsvpStatus}>
+          <StatusCard status={status} rsvpStatus={rsvpStatus} event={event}>
             <button
               type="button"
               onClick={() => setWaiverDone((v) => !v)}

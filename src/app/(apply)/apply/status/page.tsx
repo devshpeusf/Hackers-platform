@@ -74,7 +74,12 @@ export default async function ApplicationStatusPage() {
 
         {/* The real status (PLAT-45) — the same card the portal dashboard
             shows, from this viewer's own application only. */}
-        <StatusCard status={application.status} rsvpStatus={application.rsvpStatus} className="mb-6 p-6" />
+        <StatusCard
+          status={application.status}
+          rsvpStatus={application.rsvpStatus}
+          event={application.event}
+          className="mb-6 p-6"
+        />
 
         {/* MLH registration — the one thing still outstanding */}
         <PixelCard borderColor="var(--color-accent-amber)" className="mb-6 p-6">
