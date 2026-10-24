@@ -156,6 +156,54 @@ export async function recordRsvpResponse(
 }
 
 /**
+ * The signed-in counterpart to recordRsvpResponse, for the status card's RSVP
+ * buttons (PLAT-45). Same rules as the emailed link, minus the link:
+ *
+ * - Trusted application ID only. The caller resolves it from the session's
+ *   verified Discord identity; nothing from the browser chooses whose
+ *   application this is.
+ * - Only while the application is ACCEPTED and the RSVP is still PENDING —
+ *   the first answer is final, whichever way it arrives.
+ * - Closes when the event starts, matching the link's expiry.
+ *
+ * Takes the same row lock as issuing and revoking links, and repeats every
+ * condition in the write itself, so a withdrawn acceptance or an answer that
+ * just arrived by email can't be overwritten.
+ */
+export async function recordSignedInRsvpResponse(
+  applicationId: string,
+  choice: unknown,
+): Promise<RsvpResponseResult> {
+  if (choice !== "CONFIRMED" && choice !== "DECLINED") return { status: "INVALID_CHOICE" };
+
+  return prisma.$transaction(async (tx) => {
+    if (!(await lockApplication(tx, applicationId))) return { status: "UNAVAILABLE" };
+
+    const respondedAt = new Date();
+    const updated = await tx.application.updateMany({
+      where: {
+        id: applicationId,
+        status: "ACCEPTED",
+        rsvpStatus: "PENDING",
+        event: { startDate: { gt: respondedAt } },
+      },
+      data: { rsvpStatus: choice, rsvpRespondedAt: respondedAt },
+    });
+    if (updated.count === 1) return { status: choice };
+
+    // Nothing changed. Report an existing answer as-is (a repeat click, or
+    // they already answered by email); anything else is unavailable.
+    const current = await tx.application.findUnique({
+      where: { id: applicationId },
+      select: { status: true, rsvpStatus: true },
+    });
+    return current?.status === "ACCEPTED" && current.rsvpStatus !== "PENDING"
+      ? { status: current.rsvpStatus }
+      : { status: "UNAVAILABLE" };
+  });
+}
+
+/**
  * Trusted application ID only. Soft-revoke unexpired, unrevoked invitations;
  * repeated calls preserve previous revocation times and return zero changes.
  * Pass an existing transaction when later coupling this to a decision change.

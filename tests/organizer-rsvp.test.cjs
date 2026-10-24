@@ -425,6 +425,9 @@ test("the application status surface passes only the session-owned RSVP state to
   const statusContent = load("src/lib/status-card.ts", {});
   const statusCard = load("src/components/StatusCard.tsx", {
     "react/jsx-runtime": jsx, "next/link": link, "@/components/ui/PixelCard": card, "@/lib/status-card": statusContent,
+    // Signed-in RSVP buttons (PLAT-45): only rendered for ACCEPTED + PENDING,
+    // which this test doesn't cover. Covered in tests/rsvp-signed-in.test.cjs.
+    "@/components/RsvpButtons": { __esModule: true, default: () => null },
   });
   for (const rsvpStatus of ["CONFIRMED", "DECLINED"]) {
     const s = setup();

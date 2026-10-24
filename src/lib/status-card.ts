@@ -19,6 +19,8 @@ export type StatusCardContent = {
   body: string;
   /** A link to act on, when there's something to do. */
   action?: { label: string; href: string };
+  /** Show the signed-in RSVP buttons (accepted, not yet answered). */
+  rsvp?: true;
 };
 
 const BY_STATUS: Record<ApplicationStatus, StatusCardContent> = {
@@ -51,6 +53,21 @@ const NO_APPLICATION: StatusCardContent = {
   action: { label: "START YOUR APPLICATION", href: "/apply/form" },
 };
 
+/**
+ * "Nov 7–8", or "Oct 31 – Nov 1" across months. Pinned to Tampa time: event
+ * times are stored in UTC, and formatting in the server's (or browser's) own
+ * zone could shift a date — and server and browser could even disagree.
+ */
+export function formatEventDates(start: Date, end: Date): string {
+  const zone = "America/New_York";
+  const month = (d: Date) => d.toLocaleDateString("en-US", { month: "short", timeZone: zone });
+  const day = (d: Date) => d.toLocaleDateString("en-US", { day: "numeric", timeZone: zone });
+  if (month(start) === month(end)) {
+    return day(start) === day(end) ? `${month(start)} ${day(start)}` : `${month(start)} ${day(start)}–${day(end)}`;
+  }
+  return `${month(start)} ${day(start)} – ${month(end)} ${day(end)}`;
+}
+
 /** `null` means signed in but no application on file. */
 export function getStatusCardContent(status: ApplicationStatus | null, rsvpStatus?: RsvpStatus): StatusCardContent {
   if (status === "ACCEPTED" && rsvpStatus === "CONFIRMED") {
@@ -63,6 +80,15 @@ export function getStatusCardContent(status: ApplicationStatus | null, rsvpStatu
     return {
       headline: "ACCEPTED · DECLINED", color: "var(--color-text-muted)",
       body: "You declined attendance. Portal access is unavailable. To request a change, contact the event organizers.",
+    };
+  }
+  // Only when the caller actually knows the RSVP is unanswered — a caller that
+  // passes no rsvpStatus gets the plain accepted card, never buttons.
+  if (status === "ACCEPTED" && rsvpStatus === "PENDING") {
+    return {
+      ...BY_STATUS.ACCEPTED,
+      body: "You're in! We'd love to have you there. Let us know if you're coming so we can hold your spot.",
+      rsvp: true,
     };
   }
   return status ? BY_STATUS[status] : NO_APPLICATION;

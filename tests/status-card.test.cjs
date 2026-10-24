@@ -77,6 +77,6 @@ test("both pages feed it from the signed-in session", () => {
   const statusPage = readFileSync("src/app/(apply)/apply/status/page.tsx", "utf8");
   assert.match(statusPage, /getApplication\(identity\.discordId\)/);
   assert.match(statusPage, /if \(!identity\.discordId\) redirect/);
-  assert.match(statusPage, /<StatusCard status=\{application\.status\}/);
+  assert.match(statusPage, /<StatusCard\s+status=\{application\.status\}/);
   assert.doesNotMatch(statusPage, /searchParams|params\./);
 });

@@ -7,5 +7,5 @@ export default async function DashboardPage() {
   // Only the rendered SVG crosses to the client — never the application id
   // or the raw token.
   const badgeSvg = await getBadgeSvg(application.id);
-  return <Dashboard fullName={fullName} status={application.status} diet={application.diet} badgeSvg={badgeSvg} />;
+  return <Dashboard fullName={fullName} status={application.status} rsvpStatus={application.rsvpStatus} event={application.event} diet={application.diet} badgeSvg={badgeSvg} />;
 }
