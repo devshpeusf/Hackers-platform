@@ -7,6 +7,7 @@ import PixelCard from "@/components/ui/PixelCard";
 import PixelChip from "@/components/ui/PixelChip";
 import TerminalWindow from "@/components/ui/TerminalWindow";
 import StatusCard from "@/components/StatusCard";
+import { formatEventDates } from "@/lib/status-card";
 import type { ApplicationStatus, RsvpStatus } from "@/generated/prisma/client";
 import { dashboardStatus, contactLog } from "@/lib/placeholder-data";
 
@@ -17,7 +18,7 @@ type DashboardProps = {
   /** Their RSVP answer — without it a confirmed hacker would see "watch your email". */
   rsvpStatus: RsvpStatus;
   /** Name and dates, for the status card's wording. */
-  event: { name: string; startDate: Date; endDate: Date };
+  event: { name: string; startDate: Date; endDate: Date; venueName: string | null };
   diet: string;
   /** The hacker's own check-in QR, rendered server-side (src/lib/badge.ts). */
   badgeSvg: string;
@@ -46,7 +47,9 @@ export default function Dashboard({ fullName, status, rsvpStatus, event, diet, b
             </div>
           </div>
           <div className="mt-4 max-w-md text-[13px] leading-[1.7] text-text-muted">
-            Finish the steps below before check-in. {dashboardStatus.dateVenue}.
+            Finish the steps below before check-in.{" "}
+            {formatEventDates(new Date(event.startDate), new Date(event.endDate))}
+            {event.venueName ? ` at ${event.venueName}` : ""}.
           </div>
         </div>
         <div className="flex shrink-0 flex-row items-center gap-3 sm:flex-col sm:items-end">
