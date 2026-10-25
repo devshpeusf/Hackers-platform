@@ -439,6 +439,8 @@ test("the application status surface passes only the session-owned RSVP state to
       "@/lib/applications": { getApplication: async (id) => { assert.equal(id, "verified-organizer"); return application; } },
       "@/components/ui/PixelCard": card, "@/components/ui/Field": { __esModule: true, default: () => null },
       "@/components/StatusCard": statusCard,
+      // Dashboard button on /apply/status (only for portal-eligible viewers).
+      "@/lib/portal-access": load("src/lib/portal-access.ts", {}),
       "@/lib/placeholder-data": { mlhRegistration: {}, applicationCopy: { questions: ["why", "build", "fact"] } },
       "../../_shared": { STARFIELD: "" },
     });

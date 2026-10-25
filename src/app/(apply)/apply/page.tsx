@@ -3,7 +3,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { toApplicantIdentity } from "@/lib/supabase/user";
-import { hasApplied } from "@/lib/applications";
+import { getApplication } from "@/lib/applications";
+import { landingFor } from "@/lib/portal-access";
 import clsx from "@/lib/clsx";
 import DiscordIcon from "@/components/ui/DiscordIcon";
 import { applicationCopy } from "@/lib/placeholder-data";
@@ -39,7 +40,8 @@ export default async function ApplyLandingPage() {
   // No verified Discord identity counts as signed out: show the sign-in screen.
   const discordId = user ? toApplicantIdentity(user).discordId : null;
   if (discordId) {
-    redirect((await hasApplied(discordId)) ? "/apply/applied" : "/apply/form");
+    // Accepted hackers go straight to their dashboard; see landingFor.
+    redirect(landingFor(await getApplication(discordId)));
   }
 
   return (

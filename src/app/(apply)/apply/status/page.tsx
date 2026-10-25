@@ -8,6 +8,7 @@ import { toApplicantIdentity } from "@/lib/supabase/user";
 import PixelCard from "@/components/ui/PixelCard";
 import Field from "@/components/ui/Field";
 import StatusCard from "@/components/StatusCard";
+import { canEnterPortal } from "@/lib/portal-access";
 import { mlhRegistration, applicationCopy } from "@/lib/placeholder-data";
 import { STARFIELD } from "../../_shared";
 
@@ -67,9 +68,20 @@ export default async function ApplicationStatusPage() {
             />
             <h1 className="font-pixel text-lg leading-[1.7]">YOUR APPLICATION</h1>
           </div>
-          <span className="shrink-0 text-[11px] text-text-faintest sm:pt-2">
-            Submitted {formatDate(application.createdAt)}
-          </span>
+          <div className="flex shrink-0 flex-col items-start gap-3 sm:items-end sm:pt-2">
+            <span className="text-[11px] text-text-faintest">Submitted {formatDate(application.createdAt)}</span>
+            {/* Accepted hackers normally land on the dashboard after signing
+                in; this is the way back for anyone who reaches this page by a
+                link or bookmark. Same rule the dashboard itself uses. */}
+            {canEnterPortal(application) && (
+              <Link
+                href="/dashboard"
+                className="pixel-btn-solid inline-flex px-[18px] py-[10px] font-body text-[11px] font-bold tracking-wide text-surface-bg"
+              >
+                OPEN YOUR DASHBOARD &rarr;
+              </Link>
+            )}
+          </div>
         </div>
 
         {/* The real status (PLAT-45) — the same card the portal dashboard

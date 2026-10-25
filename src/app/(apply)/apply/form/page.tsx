@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { toApplicantIdentity } from "@/lib/supabase/user";
-import { hasApplied } from "@/lib/applications";
+import { getApplication } from "@/lib/applications";
+import { landingFor } from "@/lib/portal-access";
 import ApplicationWizard from "./wizard";
 
 /**
@@ -32,7 +33,10 @@ export default async function ApplyFormPage() {
   // Someone who has already applied gets sent straight to their application.
   // Without this they'd be handed a blank five-step form and only discover at
   // SUBMIT that it was never needed — the unique constraint would reject it.
-  if (await hasApplied(identity.discordId)) redirect("/apply/applied");
+  // Sign-in lands here by default (the OAuth callback's `next`), so this is
+  // also where an accepted hacker gets sent on to their dashboard.
+  const application = await getApplication(identity.discordId);
+  if (application) redirect(landingFor(application));
 
   return <ApplicationWizard identity={identity} />;
 }

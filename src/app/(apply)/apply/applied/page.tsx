@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { toApplicantIdentity } from "@/lib/supabase/user";
 import { getApplication } from "@/lib/applications";
+import { landingFor } from "@/lib/portal-access";
 import SubmittedScreen from "../../_submitted-screen";
 
 /**
@@ -29,6 +30,11 @@ export default async function AlreadyAppliedPage() {
 
   const application = await getApplication(discordId);
   if (!application) redirect("/apply/form");
+  // This is the "submitted, no decision yet" screen. Anyone already decided
+  // goes where their decision lives: the dashboard if accepted, otherwise
+  // the status page (an old bookmark here would say "in the pile").
+  const landing = landingFor(application);
+  if (landing !== "/apply/applied") redirect(landing);
 
   // The address they gave on the form, not their Discord one — that's where
   // decisions actually go.
