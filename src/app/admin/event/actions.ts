@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { toApplicantIdentity } from "@/lib/supabase/user";
 import { isOrganizer } from "@/lib/organizer";
-import { parseGuideForm } from "@/lib/event-guide";
+import { parseGuideForm, parseLocationsForm } from "@/lib/event-guide";
 import { parseScheduleForm } from "@/lib/event-schedule";
 
 export type SaveGuideState =
@@ -77,6 +77,40 @@ export async function saveEventSchedule(_previous: SaveScheduleState, formData: 
   }
 
   revalidatePath("/schedule");
+  revalidatePath("/admin/event");
+  return { status: "saved", count: parsed.rows.length };
+}
+
+export type SaveLocationsState =
+  | { status: "idle" }
+  | { status: "saved"; count: number }
+  | { status: "invalid"; error: string }
+  | { status: "denied" | "error" };
+
+/**
+ * Saves the locations list on the current event (/admin/event). Same rules as
+ * the guide and schedule: organizer re-checked here, event chosen server-side.
+ */
+export async function saveEventLocations(_previous: SaveLocationsState, formData: FormData): Promise<SaveLocationsState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user || !(await isOrganizer(toApplicantIdentity(user).discordId))) return { status: "denied" };
+
+  const parsed = parseLocationsForm(formData);
+  if (!parsed.ok) return { status: "invalid", error: parsed.error };
+
+  try {
+    const event = await prisma.event.findFirst({ orderBy: { startDate: "desc" }, select: { id: true } });
+    if (!event) return { status: "error" };
+    await prisma.event.update({ where: { id: event.id }, data: { locations: parsed.rows } });
+  } catch {
+    return { status: "error" };
+  }
+
+  revalidatePath("/guide");
+  revalidatePath("/dashboard");
   revalidatePath("/admin/event");
   return { status: "saved", count: parsed.rows.length };
 }

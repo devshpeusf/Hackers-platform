@@ -1,5 +1,6 @@
 import { getCurrentHacker } from "@/lib/current-hacker";
 import { getBadgeSvg } from "@/lib/badge";
+import { mainVenue, parseLocations } from "@/lib/event-guide";
 import Dashboard from "./Dashboard";
 
 export default async function DashboardPage() {
@@ -7,5 +8,18 @@ export default async function DashboardPage() {
   // Only the rendered SVG crosses to the client — never the application id
   // or the raw token.
   const badgeSvg = await getBadgeSvg(application.id);
-  return <Dashboard fullName={fullName} status={application.status} rsvpStatus={application.rsvpStatus} event={application.event} diet={application.diet} badgeSvg={badgeSvg} />;
+  // Just what the dashboard shows (name, dates, main venue), not the whole
+  // event row.
+  const { name, startDate, endDate, locations } = application.event;
+  const event = { name, startDate, endDate, venueName: mainVenue(parseLocations(locations)) };
+  return (
+    <Dashboard
+      fullName={fullName}
+      status={application.status}
+      rsvpStatus={application.rsvpStatus}
+      event={event}
+      diet={application.diet}
+      badgeSvg={badgeSvg}
+    />
+  );
 }

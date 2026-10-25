@@ -31,10 +31,10 @@ const guide = load("src/lib/event-guide.ts");
 // ---- parsing the admin form ----
 
 test("empty fields save as empty, so the guide shows TBA", () => {
-  const result = guide.parseGuideForm(form({ venueName: "  ", whatToBring: "" }));
+  const result = guide.parseGuideForm(form({ parkingInfo: "  ", whatToBring: "" }));
   assert.equal(result.ok, true);
   assert.deepEqual(plain(result.data), {
-    venueName: null, venueAddress: null, parkingInfo: null, wifiInfo: null, whatToBring: [], codeOfConductUrl: null,
+    parkingInfo: null, wifiInfo: null, whatToBring: [], codeOfConductUrl: null,
     hackerGuideUrl: null,
   });
 });
@@ -70,7 +70,7 @@ test("the full guide link follows the same https-only rule", () => {
 });
 
 test("overlong fields and lists are refused, nothing half-saved", () => {
-  assert.equal(guide.parseGuideForm(form({ venueName: "x".repeat(121) })).ok, false);
+  assert.equal(guide.parseGuideForm(form({ parkingInfo: "x".repeat(601) })).ok, false);
   assert.equal(guide.parseGuideForm(form({ whatToBring: Array.from({ length: 21 }, (_, i) => `item ${i}`).join("\n") })).ok, false);
   assert.equal(guide.parseGuideForm(form({ whatToBring: "y".repeat(101) })).ok, false);
 });
@@ -106,23 +106,23 @@ function setup({ organizer = true } = {}) {
 
 test("an organizer saves the guide to the current event", async () => {
   const { saveEventGuide, log } = setup();
-  const result = await saveEventGuide({ status: "idle" }, form({ venueName: "Marshall Center", wifiInfo: "eduroam" }));
+  const result = await saveEventGuide({ status: "idle" }, form({ parkingInfo: "Lot 18", wifiInfo: "eduroam" }));
   assert.equal(result.status, "saved");
   assert.equal(log.updates[0].where.id, "event-current");
-  assert.equal(log.updates[0].data.venueName, "Marshall Center");
+  assert.equal(log.updates[0].data.parkingInfo, "Lot 18");
   assert.ok(log.revalidated.includes("/guide"));
 });
 
 test("non-organizers can't save anything", async () => {
   const { saveEventGuide, log } = setup({ organizer: false });
-  const result = await saveEventGuide({ status: "idle" }, form({ venueName: "Hacked" }));
+  const result = await saveEventGuide({ status: "idle" }, form({ parkingInfo: "Hacked" }));
   assert.equal(result.status, "denied");
   assert.equal(log.updates.length, 0);
 });
 
 test("the form can't choose which event gets edited", async () => {
   const { saveEventGuide, log } = setup();
-  await saveEventGuide({ status: "idle" }, form({ id: "event-other", eventId: "event-other", venueName: "X" }));
+  await saveEventGuide({ status: "idle" }, form({ id: "event-other", eventId: "event-other", parkingInfo: "X" }));
   assert.equal(log.updates[0].where.id, "event-current");
   assert.equal("id" in log.updates[0].data, false);
   assert.equal("eventId" in log.updates[0].data, false);
@@ -153,4 +153,66 @@ test("the guide links the full document when set, and shows 'in progress' when n
 
 test("the editor page is organizer-only", () => {
   assert.match(readFileSync("src/app/admin/event/page.tsx", "utf8"), /await requireOrganizer\(\)/);
+});
+
+// ---- locations ----
+
+test("locations read back in order; hand-edited typos are skipped, never fatal", () => {
+  assert.deepEqual(plain(guide.parseLocations("nope")), []);
+  const rows = guide.parseLocations([
+    { label: "Main venue", place: "ENB", note: "Hacking, food and workshops happen here" },
+    { label: "Ceremonies", place: "CMC", note: "Opening & closing ceremonies", address: "  " },
+    { label: "No place" },
+    null,
+    { place: "No label" },
+  ]);
+  assert.deepEqual(plain(rows), [
+    { label: "Main venue", place: "ENB", note: "Hacking, food and workshops happen here", address: null },
+    { label: "Ceremonies", place: "CMC", note: "Opening & closing ceremonies", address: null },
+  ]);
+  assert.equal(guide.mainVenue(rows), "ENB");
+  assert.equal(guide.mainVenue([]), null);
+});
+
+function locForm(rows) {
+  const fd = new FormData();
+  for (const [label, place, note = "", address = ""] of rows) {
+    fd.append("locLabel", label);
+    fd.append("locPlace", place);
+    fd.append("locNote", note);
+    fd.append("locAddress", address);
+  }
+  return fd;
+}
+
+test("the locations form keeps order, drops blank blocks, and needs label + place", () => {
+  const ok = guide.parseLocationsForm(locForm([["Main venue", "ENB", "Hacking"], ["", "", "", ""], ["Ceremonies", "CMC"]]));
+  assert.equal(ok.ok, true);
+  assert.deepEqual(plain(ok.rows.map((r) => r.place)), ["ENB", "CMC"]);
+  assert.equal(ok.rows[1].note, null);
+
+  const half = guide.parseLocationsForm(locForm([["Main venue", "ENB"], ["Ceremonies", ""]]));
+  assert.equal(half.ok, false);
+  assert.match(half.error, /Location 2/);
+
+  assert.equal(guide.parseLocationsForm(locForm([["x".repeat(41), "ENB"]])).ok, false);
+  assert.equal(guide.parseLocationsForm(locForm(Array.from({ length: 11 }, (_, i) => [`L${i}`, "P"]))).ok, false);
+});
+
+test("an organizer saves locations to the current event; others can't", async () => {
+  const { saveEventLocations, log } = setup();
+  const result = await saveEventLocations({ status: "idle" }, locForm([["Main venue", "ENB"]]));
+  assert.equal(result.status, "saved");
+  assert.equal(log.updates[0].where.id, "event-current");
+  assert.deepEqual(plain(log.updates[0].data), { locations: [{ label: "Main venue", place: "ENB", note: null, address: null }] });
+
+  const denied = setup({ organizer: false });
+  assert.equal((await denied.saveEventLocations({ status: "idle" }, locForm([["Main venue", "ENB"]]))).status, "denied");
+  assert.equal(denied.log.updates.length, 0);
+});
+
+test("the guide renders one row per location, and parking says 'To be announced' when empty", () => {
+  const page = readFileSync("src/app/(app)/guide/page.tsx", "utf8");
+  assert.match(page, /parseLocations\(event\.locations\)/);
+  assert.match(page, /To be announced/);
 });
