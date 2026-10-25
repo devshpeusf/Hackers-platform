@@ -5,10 +5,9 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { toApplicantIdentity } from "@/lib/supabase/user";
-
-// Extend this list when a future ticket adds another admitted status.
-const ADMITTED_STATUSES: readonly string[] = ["ACCEPTED"];
-const PORTAL_RSVP_STATUSES: readonly string[] = ["PENDING", "CONFIRMED"];
+// Who gets the portal is shared with the sign-in landing pages, so being sent
+// here and being allowed in can't disagree. Extend the rule there.
+import { canEnterPortal } from "@/lib/portal-access";
 
 /** Request-local lookup. No caller-supplied IDs and no cross-user cache. */
 export const getCurrentHacker = cache(async () => {
@@ -72,9 +71,7 @@ export const getCurrentHacker = cache(async () => {
     },
   });
   if (!application) redirect("/apply/form");
-  if (!ADMITTED_STATUSES.includes(application.status) || !PORTAL_RSVP_STATUSES.includes(application.rsvpStatus)) {
-    redirect("/apply/status");
-  }
+  if (!canEnterPortal(application)) redirect("/apply/status");
 
   return {
     person: {

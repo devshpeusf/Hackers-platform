@@ -11,6 +11,16 @@ const compiled = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
 }).outputText;
 
+// Shared portal rule, loaded for real (it has no imports of its own at runtime).
+const portalAccess = (() => {
+  const out = ts.transpileModule(readFileSync("src/lib/portal-access.ts", "utf8"), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
+  }).outputText;
+  const ctx = { exports: {}, require: (n) => { throw new Error(`Unexpected dependency: ${n}`); } };
+  vm.runInNewContext(out, ctx);
+  return ctx.exports;
+})();
+
 function setup(overrides = {}) {
   const calls = [];
   const state = {
@@ -33,6 +43,9 @@ function setup(overrides = {}) {
       getUser: async () => ({ data: { user: state.user }, error: state.error }),
     } }) },
     "@/lib/supabase/user": { toApplicantIdentity: () => ({ username: "alex" }) },
+    // The real shared rule (src/lib/portal-access.ts), not a stub — these
+    // tests are what prove who gets into the portal.
+    "@/lib/portal-access": portalAccess,
     "@/lib/prisma": { prisma: {
       person: { findUnique: async (query) => { calls.push(["person", query]); return state.person; } },
       application: { findFirst: async (query) => { calls.push(["application", query]); return state.application; } },

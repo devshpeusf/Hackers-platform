@@ -8,16 +8,11 @@ import { prisma } from "@/lib/prisma";
  * different reasons (one to redirect, one to render).
  */
 
-/** Cheap existence check — for deciding whether to show the form at all. */
-export async function hasApplied(discordId: string): Promise<boolean> {
-  const found = await prisma.application.findFirst({
-    where: { person: { discordId } },
-    select: { id: true },
-  });
-  return found !== null;
-}
-
-/** The full application, for rendering the status page. */
+/**
+ * The latest application, with person and event. Used both to render the
+ * status page and to decide where someone lands after signing in (see
+ * landingFor in src/lib/portal-access.ts) — so the two can't disagree.
+ */
 export async function getApplication(discordId: string) {
   return prisma.application.findFirst({
     where: { person: { discordId } },
