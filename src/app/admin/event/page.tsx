@@ -5,10 +5,12 @@ import PixelCard from "@/components/ui/PixelCard";
 import GuideForm from "./guide-form";
 import ScheduleForm from "./schedule-form";
 import { parseSchedule } from "@/lib/event-schedule";
+import LocationsForm from "./locations-form";
+import { parseLocations } from "@/lib/event-guide";
 
 /**
- * Organizer editor for the hacker guide (venue, wifi, what to bring, code of
- * conduct). Saves to the current Event row; /guide reads it on the next load.
+ * Organizer editor for the hacker guide (full guide link, parking, wifi, what
+ * to bring, code of conduct), its locations, and the schedule. Saves to the current Event row; /guide reads it on the next load.
  * Organizer-only, like the rest of /admin.
  */
 export default async function AdminEventPage() {
@@ -19,8 +21,7 @@ export default async function AdminEventPage() {
     orderBy: { startDate: "desc" },
     select: {
       name: true,
-      venueName: true,
-      venueAddress: true,
+      locations: true,
       parkingInfo: true,
       wifiInfo: true,
       whatToBring: true,
@@ -45,6 +46,16 @@ export default async function AdminEventPage() {
           </p>
           {event && <GuideForm initial={event} />}
         </PixelCard>
+
+        {event && (
+          <PixelCard className="mt-8 p-6 md:p-8">
+            <h2 className="mb-2 font-pixel text-lg leading-[1.6] text-text-primary">LOCATIONS</h2>
+            <p className="mb-6 text-[13px] leading-[1.7] text-text-muted">
+              Where things happen, shown on the guide&apos;s Venue &amp; Parking card. Saves separately.
+            </p>
+            <LocationsForm initial={parseLocations(event.locations)} />
+          </PixelCard>
+        )}
 
         {event && (
           <PixelCard className="mt-8 p-6 md:p-8">

@@ -68,8 +68,14 @@ model Event {
   /// Hacker guide (/guide). Edited from /admin/event or in Supabase — no
   /// deploy. All optional: an empty field shows "TBA" rather than breaking
   /// the page, so a new event can go live before every detail is known.
-  venueName        String?
-  venueAddress     String?
+  /// Where things happen: a JSON list of { label, place, note?, address? } in
+  /// display order — e.g. "Main venue: ENB" and "Ceremonies: CMC". A list, not
+  /// one venue field, so next year's setup (a separate food hall, say) is data,
+  /// not code. An address gives that place its own Maps link. The first entry
+  /// is the main venue (the dashboard header names it). Read through
+  /// parseLocations(), which tolerates bad hand-edited JSON.
+  locations        Json     @default("[]")
+  /// Empty shows "To be announced" in amber on /guide.
   parkingInfo      String?
   /// Free text, not network + password: USF uses eduroam / USF-Guest with no
   /// shared password. Line breaks are kept on the page.

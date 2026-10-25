@@ -26,17 +26,15 @@ export default function GuideForm({ initial }: { initial: EventGuide }) {
         />
       </Section>
 
-      <Section title="VENUE & PARKING">
-        <Input id="venueName" label="Venue" placeholder="Marshall Student Center, Ballroom" defaultValue={initial.venueName} error={errors.venueName} />
-        <Input
-          id="venueAddress"
-          label="Address"
-          hint="Becomes a Google Maps link on the guide."
-          placeholder="4103 USF Cedar Circle, Tampa, FL 33620"
-          defaultValue={initial.venueAddress}
-          error={errors.venueAddress}
+      <Section title="PARKING">
+        <TextArea
+          id="parkingInfo"
+          label="Parking"
+          hint="Leave empty until it's decided. The guide shows “To be announced”. Venues are edited in Locations below."
+          placeholder="Free parking in Lot 18 after 5pm."
+          defaultValue={initial.parkingInfo}
+          error={errors.parkingInfo}
         />
-        <TextArea id="parkingInfo" label="Parking" placeholder="Free parking in Lot 18 after 5pm." defaultValue={initial.parkingInfo} error={errors.parkingInfo} />
       </Section>
 
       <Section title="WIFI">
