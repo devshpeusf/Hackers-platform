@@ -98,6 +98,8 @@ function setup({ organizer = true } = {}) {
     "@/lib/supabase/user": load("src/lib/supabase/user.ts"),
     "@/lib/organizer": { isOrganizer: async (id) => organizer && id === "discord-me" },
     "@/lib/event-guide": guide,
+    // actions.ts also holds the schedule save (tests/event-schedule.test.cjs).
+    "@/lib/event-schedule": load("src/lib/event-schedule.ts"),
   });
   return { ...actions, log };
 }

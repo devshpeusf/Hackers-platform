@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { requireOrganizer } from "@/lib/organizer";
 import PixelCard from "@/components/ui/PixelCard";
 import GuideForm from "./guide-form";
+import ScheduleForm from "./schedule-form";
+import { parseSchedule } from "@/lib/event-schedule";
 
 /**
  * Organizer editor for the hacker guide (venue, wifi, what to bring, code of
@@ -24,6 +26,7 @@ export default async function AdminEventPage() {
       whatToBring: true,
       codeOfConductUrl: true,
       hackerGuideUrl: true,
+      schedule: true,
     },
   });
 
@@ -42,6 +45,17 @@ export default async function AdminEventPage() {
           </p>
           {event && <GuideForm initial={event} />}
         </PixelCard>
+
+        {event && (
+          <PixelCard className="mt-8 p-6 md:p-8">
+            <h2 className="mb-2 font-pixel text-lg leading-[1.6] text-text-primary">SCHEDULE</h2>
+            <p className="mb-6 text-[13px] leading-[1.7] text-text-muted">
+              The run of show on /schedule. Saves separately from the guide above. If something slips on the day,
+              announce it in Discord and fix the time here.
+            </p>
+            <ScheduleForm initial={parseSchedule(event.schedule)} />
+          </PixelCard>
+        )}
       </div>
     </div>
   );

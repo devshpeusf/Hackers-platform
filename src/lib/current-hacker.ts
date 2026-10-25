@@ -60,6 +60,7 @@ export const getCurrentHacker = cache(async () => {
           whatToBring: true,
           codeOfConductUrl: true,
           hackerGuideUrl: true,
+          schedule: true,
         },
       },
       school: true,
