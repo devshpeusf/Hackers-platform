@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { toApplicantIdentity } from "@/lib/supabase/user";
 import { isOrganizer } from "@/lib/organizer";
 import { parseGuideForm } from "@/lib/event-guide";
+import { parseScheduleForm } from "@/lib/event-schedule";
 
 export type SaveGuideState =
   | { status: "idle" }
@@ -44,4 +45,38 @@ export async function saveEventGuide(_previous: SaveGuideState, formData: FormDa
   revalidatePath("/dashboard");
   revalidatePath("/admin/event");
   return { status: "saved", at: new Date().toISOString() };
+}
+
+export type SaveScheduleState =
+  | { status: "idle" }
+  | { status: "saved"; count: number }
+  | { status: "invalid"; error: string }
+  | { status: "denied" | "error" };
+
+/**
+ * Saves the run of show on the current event (/admin/event). Same rules as
+ * the guide: organizer re-checked here, event chosen server-side. Replaces
+ * the whole list, in the order submitted.
+ */
+export async function saveEventSchedule(_previous: SaveScheduleState, formData: FormData): Promise<SaveScheduleState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user || !(await isOrganizer(toApplicantIdentity(user).discordId))) return { status: "denied" };
+
+  const parsed = parseScheduleForm(formData);
+  if (!parsed.ok) return { status: "invalid", error: parsed.error };
+
+  try {
+    const event = await prisma.event.findFirst({ orderBy: { startDate: "desc" }, select: { id: true } });
+    if (!event) return { status: "error" };
+    await prisma.event.update({ where: { id: event.id }, data: { schedule: parsed.rows } });
+  } catch {
+    return { status: "error" };
+  }
+
+  revalidatePath("/schedule");
+  revalidatePath("/admin/event");
+  return { status: "saved", count: parsed.rows.length };
 }

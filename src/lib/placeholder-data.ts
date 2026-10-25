@@ -41,23 +41,7 @@ export const team = {
 
 // guideCards moved to the Event row — see src/lib/event-guide.ts and /admin/event.
 
-export type ScheduleRow = {
-  time: string;
-  label: string;
-  highlighted: boolean;
-};
-
-export const scheduleItems: ScheduleRow[] = [
-  { time: "[T0]", label: "Check-in & breakfast", highlighted: false },
-  { time: "[T1]", label: "Opening ceremony", highlighted: false },
-  { time: "[T2]", label: "Hacking begins", highlighted: true },
-  { time: "[T3]", label: "Workshop block", highlighted: false },
-  { time: "[T4]", label: "Lunch", highlighted: false },
-  { time: "[T5]", label: "Dinner", highlighted: false },
-  { time: "[T6]", label: "Submission deadline", highlighted: false },
-  { time: "[T7]", label: "Judging", highlighted: false },
-  { time: "[T8]", label: "Closing ceremony & awards", highlighted: false },
-];
+// The schedule moved to the Event row — see src/lib/event-schedule.ts and /admin/event.
 
 /* ------------------------------------------------------------------ *
  * Application flow (PLAT-35 design, built cosmetically for PLAT-16).

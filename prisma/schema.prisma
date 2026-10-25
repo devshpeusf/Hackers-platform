@@ -82,6 +82,13 @@ model Event {
   /// and shows an "in progress" state while it's empty.
   hackerGuideUrl   String?
 
+  /// The run of show (/schedule): a JSON list of { time, label, highlighted }
+  /// in display order. Edited from /admin/event or by hand in Supabase — no
+  /// deploy, so a slip on the day can be fixed live. Empty shows an "in
+  /// progress" state. Read through parseSchedule(), which tolerates bad
+  /// hand-edited JSON instead of breaking the page.
+  schedule         Json     @default("[]")
+
   // One event can have many applications
   applications Application[]
 }
