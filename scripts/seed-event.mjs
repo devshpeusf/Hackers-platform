@@ -23,6 +23,11 @@ const END = "2026-11-08T18:00:00Z";
 // email reads this from the event row instead, so a future event doesn't
 // inherit this one's link the way a hardcoded string would.
 const ORGANIZER_HQ_URL = "https://events.mlh.com/events/14412-hackjam-26?intent=register";
+// Hacker guide defaults. Venue and parking are left empty ("TBA" on /guide)
+// until confirmed; edit them at /admin/event.
+const WIFI_INFO = "Connect to eduroam with your school login, or USF-Guest (open network, no password).";
+const WHAT_TO_BRING = ["Laptop & charger", "Student ID", "Valid photo ID", "Refillable water bottle"];
+const CODE_OF_CONDUCT_URL = "https://mlh.io/code-of-conduct";
 
 const db = new Client({ connectionString: process.env.DIRECT_URL });
 await db.connect();
@@ -33,8 +38,8 @@ if (existing.rowCount) {
 } else {
   const id = crypto.randomUUID();
   await db.query(
-    'insert into "Event" (id, name, "startDate", "endDate", "organizerHqUrl") values ($1, $2, $3, $4, $5)',
-    [id, NAME, START, END, ORGANIZER_HQ_URL],
+    'insert into "Event" (id, name, "startDate", "endDate", "organizerHqUrl", "wifiInfo", "whatToBring", "codeOfConductUrl") values ($1, $2, $3, $4, $5, $6, $7, $8)',
+    [id, NAME, START, END, ORGANIZER_HQ_URL, WIFI_INFO, WHAT_TO_BRING, CODE_OF_CONDUCT_URL],
   );
   console.log(`seeded: ${NAME} (${id})`);
 }

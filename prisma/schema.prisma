@@ -65,6 +65,23 @@ model Event {
   /// doesn't inherit this one's link.
   organizerHqUrl String
 
+  /// Hacker guide (/guide). Edited from /admin/event or in Supabase — no
+  /// deploy. All optional: an empty field shows "TBA" rather than breaking
+  /// the page, so a new event can go live before every detail is known.
+  venueName        String?
+  venueAddress     String?
+  parkingInfo      String?
+  /// Free text, not network + password: USF uses eduroam / USF-Guest with no
+  /// shared password. Line breaks are kept on the page.
+  wifiInfo         String?
+  whatToBring      String[] @default([])
+  /// Empty falls back to MLH's official Code of Conduct on the page.
+  codeOfConductUrl String?
+  /// The full hacker guide document (public, e.g. Notion). The fields above
+  /// are only the day-of essentials; /guide links here for everything else,
+  /// and shows an "in progress" state while it's empty.
+  hackerGuideUrl   String?
+
   // One event can have many applications
   applications Application[]
 }

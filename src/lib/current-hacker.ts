@@ -46,8 +46,22 @@ export const getCurrentHacker = cache(async () => {
       id: true,
       status: true,
       rsvpStatus: true,
-      // For the status card's "will you be there?" date line.
-      event: { select: { name: true, startDate: true, endDate: true } },
+      // Name and dates for the status card and dashboard header; the rest
+      // is the hacker guide (/guide), read from the hacker's own event.
+      event: {
+        select: {
+          name: true,
+          startDate: true,
+          endDate: true,
+          venueName: true,
+          venueAddress: true,
+          parkingInfo: true,
+          wifiInfo: true,
+          whatToBring: true,
+          codeOfConductUrl: true,
+          hackerGuideUrl: true,
+        },
+      },
       school: true,
       major: true,
       graduation: true,

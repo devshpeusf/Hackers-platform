@@ -460,8 +460,11 @@ function Shell({ eventName, children }: { eventName: string | null; children: Re
           </div>
           <div className="px-4 pt-6 md:px-6">
             <h1 className="mb-2 font-pixel text-xl leading-[1.6] text-text-primary md:text-2xl">APPLICATIONS</h1>
-            <p className="mb-6 text-[13px] text-text-muted">
-              {eventName ? `review queue for ${eventName}` : "review queue"}
+            <p className="mb-6 flex flex-wrap items-baseline justify-between gap-2 text-[13px] text-text-muted">
+              <span>{eventName ? `review queue for ${eventName}` : "review queue"}</span>
+              <Link href="/admin/event" className="text-[12px] hover:text-accent-pink">
+                Edit hacker guide &rarr;
+              </Link>
             </p>
             {children}
           </div>

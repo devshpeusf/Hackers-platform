@@ -24,7 +24,6 @@ export const navItems: NavItem[] = [
 
 export const dashboardStatus = {
   eventName: "HACKJAM '26",
-  dateVenue: "[DATE] at [VENUE]",
   // The status headline and the fake "done" checklist are gone: the dashboard
   // shows the hacker's real status now (src/components/StatusCard.tsx).
 };
@@ -40,29 +39,7 @@ export const team = {
   inviteCode: "HJ26-7F3K",
 };
 
-export const guideCards = {
-  venue: {
-    title: "VENUE & PARKING",
-    lines: ["[VENUE], University of South Florida", "[ADDRESS]", "Free parking in [LOT NAME]."],
-  },
-  wifi: {
-    title: "WIFI",
-    network: "[WIFI-NAME]",
-    password: "[WIFI-PASSWORD]",
-  },
-  whatToBring: {
-    title: "WHAT TO BRING",
-    items: ["Laptop & charger", "Student ID", "Valid photo ID", "Refillable water bottle"],
-  },
-  codeOfConduct: {
-    title: "CODE OF CONDUCT",
-    // Per project brief: HackJam is applying to MLH's Hack Days program,
-    // not Member Event status — this replaces the mockup's "MLH Member
-    // Event" wording. Everything else on this card matches the mockup.
-    body: "HackJam is an MLH Hack Day. All hackers agree to the",
-    linkLabel: "MLH Code of Conduct",
-  },
-};
+// guideCards moved to the Event row — see src/lib/event-guide.ts and /admin/event.
 
 export type ScheduleRow = {
   time: string;
