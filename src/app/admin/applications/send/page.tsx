@@ -53,6 +53,7 @@ export default async function SendDecisionsPage({
     select: {
       id: true,
       status: true,
+      source: true,
       person: { select: { firstName: true, lastName: true, email: true } },
       emailQueue: { select: { emailType: true, status: true, sentAt: true } },
     },
@@ -64,7 +65,7 @@ export default async function SendDecisionsPage({
 
   for (const a of decided) {
     if (a.status === "SUBMITTED") continue;
-    if (!needsAnnouncement(a.status, a.emailQueue)) {
+    if (!needsAnnouncement(a.status, a.source, a.emailQueue)) {
       alreadyQueued++;
       continue;
     }

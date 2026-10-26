@@ -346,6 +346,7 @@ export async function queueDecisionEmails(formData: FormData) {
     select: {
       id: true,
       status: true,
+      source: true,
       emailQueue: { select: { emailType: true } },
     },
   });
@@ -357,7 +358,7 @@ export async function queueDecisionEmails(formData: FormData) {
     // Narrows status to a Decision — the query already excluded SUBMITTED, but
     // the type doesn't know that.
     if (application.status === "SUBMITTED") continue;
-    if (!needsAnnouncement(application.status, application.emailQueue)) continue;
+    if (!needsAnnouncement(application.status, application.source, application.emailQueue)) continue;
     if (announcementBlockedReason(application.status, rsvpUrl)) {
       blocked++;
       continue;
