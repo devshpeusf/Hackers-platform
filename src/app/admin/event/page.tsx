@@ -27,6 +27,8 @@ export default async function AdminEventPage() {
       whatToBring: true,
       codeOfConductUrl: true,
       hackerGuideUrl: true,
+      discordUrl: true,
+      contactEmail: true,
       schedule: true,
     },
   });

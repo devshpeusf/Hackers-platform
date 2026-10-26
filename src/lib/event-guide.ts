@@ -13,6 +13,10 @@ export type EventGuide = {
   codeOfConductUrl: string | null;
   /** The full guide document. Empty shows an "in progress" state on /guide. */
   hackerGuideUrl: string | null;
+  /** Discord invite for questions. */
+  discordUrl: string | null;
+  /** Organizer email — the private channel (e.g. Code of Conduct concerns). */
+  contactEmail: string | null;
 };
 
 /** A Google Maps search for the address — no extra field to maintain. */
@@ -26,6 +30,8 @@ const LIMITS = {
   wifiInfo: 600,
   codeOfConductUrl: 300,
   hackerGuideUrl: 500,
+  discordUrl: 300,
+  contactEmail: 120,
   whatToBringItem: 100,
   whatToBringItems: 20,
 } as const;
@@ -44,7 +50,7 @@ function text(raw: FormDataEntryValue | null): string {
  */
 function link(
   formData: FormData,
-  field: "codeOfConductUrl" | "hackerGuideUrl",
+  field: "codeOfConductUrl" | "hackerGuideUrl" | "discordUrl",
   errors: Record<string, string>,
   message: string,
 ): string | null {
@@ -91,6 +97,14 @@ export function parseGuideForm(
 
   data.codeOfConductUrl = link(formData, "codeOfConductUrl", errors, "Use a full https:// link, or leave it empty for MLH's.");
   data.hackerGuideUrl = link(formData, "hackerGuideUrl", errors, "Use a full https:// link, or leave it empty for now.");
+  data.discordUrl = link(formData, "discordUrl", errors, "Use a full https:// link, like https://discord.gg/…");
+
+  // A plain shape check, not deliverability: catches typos like a missing @.
+  const email = text(formData.get("contactEmail"));
+  if (email && (email.length > LIMITS.contactEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
+    errors.contactEmail = "That doesn't look like an email address.";
+  }
+  data.contactEmail = email || null;
 
   return Object.keys(errors).length ? { ok: false, errors } : { ok: true, data };
 }

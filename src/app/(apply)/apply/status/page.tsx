@@ -153,8 +153,17 @@ export default async function ApplicationStatusPage() {
         </PixelCard>
 
         <p className="mt-5 text-[11px] leading-[1.7] text-text-faintest">
+          {/* Straight to Discord, not /help: the portal (and the old help page)
+              is accepted-only, so most people reading this couldn't open it. */}
           Need to change something? Message an organiser in{" "}
-          <Link href="/help">Discord</Link> — we can update it for you.
+          {application.event.discordUrl ? (
+            <a href={application.event.discordUrl} target="_blank" rel="noopener noreferrer">
+              Discord
+            </a>
+          ) : (
+            "Discord"
+          )}{" "}
+          — we can update it for you.
         </p>
       </div>
     </div>

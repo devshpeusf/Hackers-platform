@@ -1,5 +1,6 @@
 import PageHeading from "@/components/ui/PageHeading";
 import PixelCard from "@/components/ui/PixelCard";
+import CopyEmail from "@/components/CopyEmail";
 import { getCurrentHacker } from "@/lib/current-hacker";
 import { DEFAULT_CODE_OF_CONDUCT_URL, mapsUrl, parseLocations } from "@/lib/event-guide";
 
@@ -104,7 +105,52 @@ export default async function GuidePage() {
           )}
         </div>
       </div>
+
+      <NeedHelp discordUrl={event.discordUrl} contactEmail={event.contactEmail} />
     </div>
+  );
+}
+
+/**
+ * Replaces the old in-app help form (cut for time). Questions go to Discord;
+ * anything private — a Code of Conduct concern — goes by email, since a
+ * public channel is no place for that. id="help" so /help can land here.
+ */
+function NeedHelp({ discordUrl, contactEmail }: { discordUrl: string | null; contactEmail: string | null }) {
+  return (
+    <section id="help" aria-label="Need help?" className="scroll-mt-8">
+      <PixelCard borderColor="var(--color-accent-pink)" className="card-pad">
+        <span className="card-title text-accent-pink">NEED HELP?</span>
+        <div className="mt-5 grid grid-cols-1 gap-8 md:grid-cols-2 md:gap-10">
+          <div className="flex flex-col gap-3">
+            <span className="card-label text-text-muted">QUESTIONS</span>
+            <p className="card-text text-text-secondary">
+              Stuck, lost, or need an organizer during the event? Ask in Discord. Organizers and other hackers are there.
+            </p>
+            {discordUrl ? (
+              <a
+                href={discordUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="pixel-btn-solid mt-1 inline-flex self-start px-[22px] py-[12px] font-body text-[12px] font-bold tracking-wide text-surface-bg"
+              >
+                ASK IN DISCORD &rarr;
+              </a>
+            ) : (
+              <span className="card-text text-text-dim">Discord link coming soon.</span>
+            )}
+          </div>
+          <div className="flex flex-col gap-3 md:border-l md:border-text-primary/8 md:pl-10">
+            <span className="card-label text-text-muted">PRIVATE CONCERNS</span>
+            <p className="card-text text-text-secondary">
+              For anything you&apos;d rather not post publicly, like a Code of Conduct concern, email the organizers
+              directly.
+            </p>
+            {contactEmail ? <CopyEmail email={contactEmail} /> : <span className="card-text text-text-dim">Email coming soon.</span>}
+          </div>
+        </div>
+      </PixelCard>
+    </section>
   );
 }
 
