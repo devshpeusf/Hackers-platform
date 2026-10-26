@@ -18,7 +18,7 @@ export default async function DashboardPage() {
       status={application.status}
       rsvpStatus={application.rsvpStatus}
       event={event}
-      diet={application.diet}
+      diet={application.diet ?? "Not provided"}
       badgeSvg={badgeSvg}
     />
   );

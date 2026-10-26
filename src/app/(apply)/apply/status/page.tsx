@@ -29,7 +29,8 @@ function formatDate(d: Date) {
 }
 
 /** "2027-05" -> "May 2027". Falls back to the raw value if it's an older row. */
-function formatGraduation(v: string) {
+function formatGraduation(v: string | null) {
+  if (!v) return null;
   const m = /^(\d{4})-(\d{2})$/.exec(v);
   if (!m) return v;
   const date = new Date(Number(m[1]), Number(m[2]) - 1);
@@ -123,7 +124,7 @@ export default async function ApplicationStatusPage() {
           <Divider />
 
           <Section number="02" title="ABOUT YOU">
-            <Row label="Date of Birth" value={formatDate(application.dateOfBirth)} />
+            <Row label="Date of Birth" value={application.dateOfBirth ? formatDate(application.dateOfBirth) : null} />
             <Row label="Country" value={application.country} />
             <Row label="Level of Study" value={application.levelOfStudy} />
             <Row label="Gender" value={application.gender} optional />
