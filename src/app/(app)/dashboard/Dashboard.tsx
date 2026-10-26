@@ -9,7 +9,7 @@ import TerminalWindow from "@/components/ui/TerminalWindow";
 import StatusCard from "@/components/StatusCard";
 import { formatEventDates } from "@/lib/status-card";
 import type { ApplicationStatus, RsvpStatus } from "@/generated/prisma/client";
-import { dashboardStatus, contactLog } from "@/lib/placeholder-data";
+import { dashboardStatus } from "@/lib/placeholder-data";
 
 type DashboardProps = {
   fullName: string;
@@ -18,7 +18,15 @@ type DashboardProps = {
   /** Their RSVP answer — without it a confirmed hacker would see "watch your email". */
   rsvpStatus: RsvpStatus;
   /** Name and dates, for the status card's wording. */
-  event: { name: string; startDate: Date; endDate: Date; venueName: string | null };
+  event: {
+    name: string;
+    startDate: Date;
+    endDate: Date;
+    venueName: string | null;
+    /** Help contacts from the Event row (same as the guide's "Need help?" box). */
+    discordUrl: string | null;
+    contactEmail: string | null;
+  };
   diet: string;
   /** The hacker's own check-in QR, rendered server-side (src/lib/badge.ts). */
   badgeSvg: string | null;
@@ -164,21 +172,41 @@ export default function Dashboard({ fullName, status, rsvpStatus, event, diet, b
 
           <TerminalWindow filename="CONTACT.LOG">
             <div className="px-6.5 pt-3 pb-5">
-              {contactLog.map((entry, i) => (
-                <div
-                  key={entry.command}
-                  className={
-                    "flex items-center justify-between py-3.5" +
-                    (i < contactLog.length - 1 ? " border-b border-text-primary/8" : "")
-                  }
-                >
-                  <div className="card-meta">
-                    <span className="text-accent-teal">$</span> {entry.command}{" "}
-                    <span className="text-text-dim">{entry.target}</span>
-                  </div>
-                  <span className="text-[12px] text-accent-teal">{entry.action}</span>
-                </div>
-              ))}
+              {/* Real contacts from the Event row; a row hides until it's set. */}
+              {[
+                event.discordUrl && {
+                  command: "discord --join",
+                  target: "HackJam Discord",
+                  action: "JOIN",
+                  href: event.discordUrl,
+                  external: true,
+                },
+                event.contactEmail && {
+                  command: "mail --to",
+                  target: event.contactEmail,
+                  action: "EMAIL",
+                  href: `mailto:${event.contactEmail}`,
+                  external: false,
+                },
+              ]
+                .filter((entry) => !!entry)
+                .map((entry, i, all) => (
+                  <a
+                    key={entry.command}
+                    href={entry.href}
+                    {...(entry.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                    className={
+                      "group flex items-center justify-between gap-4 py-3.5" +
+                      (i < all.length - 1 ? " border-b border-text-primary/8" : "")
+                    }
+                  >
+                    <div className="card-meta min-w-0 break-all">
+                      <span className="text-accent-teal">$</span> {entry.command}{" "}
+                      <span className="text-text-dim group-hover:text-text-secondary">{entry.target}</span>
+                    </div>
+                    <span className="shrink-0 text-[12px] text-accent-teal group-hover:underline">{entry.action}</span>
+                  </a>
+                ))}
             </div>
           </TerminalWindow>
         </div>

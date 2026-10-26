@@ -26,6 +26,25 @@ export default function GuideForm({ initial }: { initial: EventGuide }) {
         />
       </Section>
 
+      <Section title="HELP">
+        <Input
+          id="discordUrl"
+          label="Discord invite"
+          hint="Where hackers ask questions. Shown on the guide's “Need help?” box and the dashboard."
+          placeholder="https://discord.gg/…"
+          defaultValue={initial.discordUrl}
+          error={errors.discordUrl}
+        />
+        <Input
+          id="contactEmail"
+          label="Organizer email"
+          hint="For private reports, like a Code of Conduct concern."
+          placeholder="organizers@example.com"
+          defaultValue={initial.contactEmail}
+          error={errors.contactEmail}
+        />
+      </Section>
+
       <Section title="PARKING">
         <TextArea
           id="parkingInfo"

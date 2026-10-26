@@ -86,6 +86,11 @@ model Event {
   /// are only the day-of essentials; /guide links here for everything else,
   /// and shows an "in progress" state while it's empty.
   hackerGuideUrl   String?
+  /// Where hackers get help (the "Need help?" box on /guide and the
+  /// dashboard's contact box). There's no in-app help form: questions go to
+  /// Discord, and anything private (a Code of Conduct concern) goes by email.
+  discordUrl       String?
+  contactEmail     String?
 
   /// The run of show (/schedule): a JSON list of { time, label, highlighted }
   /// in display order. Edited from /admin/event or by hand in Supabase — no

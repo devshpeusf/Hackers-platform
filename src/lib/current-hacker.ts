@@ -58,6 +58,8 @@ export const getCurrentHacker = cache(async () => {
           whatToBring: true,
           codeOfConductUrl: true,
           hackerGuideUrl: true,
+          discordUrl: true,
+          contactEmail: true,
           schedule: true,
         },
       },

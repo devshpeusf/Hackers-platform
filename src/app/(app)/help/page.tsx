@@ -1,45 +1,15 @@
-import PageHeading from "@/components/ui/PageHeading";
-import TerminalWindow from "@/components/ui/TerminalWindow";
-import Field from "@/components/ui/Field";
-import PixelButton from "@/components/ui/PixelButton";
+import { redirect } from "next/navigation";
 import { getCurrentHacker } from "@/lib/current-hacker";
 
-function ChevronDown() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="var(--color-text-dim)"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M6 9l6 6 6-6" />
-    </svg>
-  );
-}
-
+/**
+ * The help page was replaced by the "Need help?" box on the guide: questions
+ * go to Discord, private concerns by email. There's no in-app help form —
+ * storing reports and an organizer inbox didn't fit before the event.
+ *
+ * Kept as a redirect so old links and bookmarks still land somewhere useful.
+ * Still checks portal access first, like every portal page.
+ */
 export default async function HelpPage() {
   await getCurrentHacker();
-  return (
-    <div>
-      <PageHeading title="HELP / REPORT AN ISSUE" />
-
-      <TerminalWindow filename="NEW-REPORT.LOG" className="max-w-[760px]">
-        <div className="flex flex-col gap-5 px-7 py-7 lg:px-8">
-          <Field size="lg" label="Category" placeholder="Select a category..." rightIcon={<ChevronDown />} />
-          <Field size="lg" label="Title" placeholder="A brief, descriptive title..." />
-          <Field size="lg" label="Description" placeholder="Please provide as much detail as possible..." multiline />
-          <Field size="lg" label="Contact" optional placeholder="Discord handle or email..." />
-          <PixelButton className="mt-1.5 self-start px-[22px] py-3 text-[11px]">SUBMIT REPORT</PixelButton>
-        </div>
-      </TerminalWindow>
-
-      <div className="mt-4.5 max-w-[760px] card-meta text-text-dim">
-        For urgent issues during the event, message an organizer directly in <a href="#">Discord</a>.
-      </div>
-    </div>
-  );
+  redirect("/guide#help");
 }
