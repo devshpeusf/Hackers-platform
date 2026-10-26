@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { toApplicantIdentity } from "@/lib/supabase/user";
 import { revokeRsvpTokens } from "@/lib/rsvp";
+import { ensureBadgeToken } from "@/lib/badge";
 import { getRsvpBaseUrl } from "@/lib/site-url";
 import {
   BULK_LIMIT,
@@ -126,6 +127,7 @@ export async function decideApplication(formData: FormData) {
       },
     });
     if (updated.count !== 1) return "locked" as const;
+    if (decision === "ACCEPTED") await ensureBadgeToken(id, tx);
     if (application.status === "ACCEPTED") {
       await revokeRsvpTokens(id, tx);
       // Don't let an old pending email automatically invite them again after
@@ -219,6 +221,12 @@ export async function decideApplications(formData: FormData) {
         })
       : [];
 
+    if (decision === "ACCEPTED") {
+      // A separate issuance per changed row gives each attendee a distinct
+      // credential. All locks are held, and any failure rolls back the batch.
+      for (const application of updated) await ensureBadgeToken(application.id, tx);
+    }
+
     const changedIds = new Set(updated.map((a) => a.id));
     const withdrawn = applications
       .filter((a) => a.status === "ACCEPTED" && changedIds.has(a.id))
@@ -243,6 +251,10 @@ export async function decideApplications(formData: FormData) {
       skipped: plan.locked.length + (plan.toChange.length - updated.length),
       ignored: ids.length - applications.length,
     };
+  }, {
+    // Allow the per-attendee badge writes up to BULK_LIMIT to finish over the
+    // shared DB connection, with a bounded transaction timeout.
+    timeout: 60_000,
   });
 
   revalidatePath("/admin/applications");
@@ -334,6 +346,7 @@ export async function queueDecisionEmails(formData: FormData) {
     select: {
       id: true,
       status: true,
+      source: true,
       emailQueue: { select: { emailType: true } },
     },
   });
@@ -345,7 +358,7 @@ export async function queueDecisionEmails(formData: FormData) {
     // Narrows status to a Decision — the query already excluded SUBMITTED, but
     // the type doesn't know that.
     if (application.status === "SUBMITTED") continue;
-    if (!needsAnnouncement(application.status, application.emailQueue)) continue;
+    if (!needsAnnouncement(application.status, application.source, application.emailQueue)) continue;
     if (announcementBlockedReason(application.status, rsvpUrl)) {
       blocked++;
       continue;

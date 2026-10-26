@@ -467,6 +467,7 @@ test("queueing an acceptance only inserts an EmailQueue row, without issuing a c
     } } }) } }) },
     "@/lib/supabase/user": user, "@/lib/decisions": decisions,
     "@/lib/rsvp": { revokeRsvpTokens: () => assert.fail("Queueing must not revoke or issue credentials") },
+    "@/lib/badge": { ensureBadgeToken: () => assert.fail("Queueing must not issue a badge") },
     "@/lib/site-url": siteUrl,
   }, { process: { env: { RSVP_URL: "https://example.invalid/rsvp" } }, URLSearchParams });
   const form = new FormData();

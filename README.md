@@ -101,6 +101,23 @@ confirmed, and declined are subsets of that total. Portal access requires
 ACCEPTED with PENDING or CONFIRMED attendance; declined applicants go to their
 own application status page.
 
+## Badge credentials (PLAT-51)
+
+Individual and bulk acceptance issue a badge in the same transaction as the
+decision, using 32 cryptographically random bytes encoded as base64url. The
+existing unique database constraint remains authoritative. An issuance failure
+rolls back the decision (the entire batch for bulk acceptance).
+
+Each application's badge survives withdrawal and re-acceptance. RSVP credentials
+remain separate. The authenticated owner's dashboard only reads the issued
+badge and renders its QR; it never creates a token. A missing badge shows a
+message to contact an organizer. There is no public badge lookup or scanner
+cached-list delivery.
+
+Before deploying this lifecycle to an existing database, count ACCEPTED rows
+with null badgeToken in a read-only query. Any missing credentials require a
+separately approved backfill; dashboard visits do not repair them.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

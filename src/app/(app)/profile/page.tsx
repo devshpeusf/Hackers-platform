@@ -52,7 +52,7 @@ export default async function ProfilePage() {
         <ProfileSection number="02" title="ABOUT YOU" description="Shirt size and demographic info.">
           <div className="flex flex-col gap-4.5 sm:flex-row">
             <Field size="lg" className="flex-1" label="Gender" optional value={application.gender ?? "Not provided"} />
-            <Field size="lg" className="flex-1" label="Shirt Size" value={application.shirtSize} />
+            <Field size="lg" className="flex-1" label="Shirt Size" value={application.shirtSize ?? "Not provided"} />
           </div>
         </ProfileSection>
 
@@ -61,10 +61,10 @@ export default async function ProfilePage() {
         <ProfileSection number="03" title="ACADEMIC INFO" description="Your school, major, and graduation.">
           <div className="flex flex-col gap-4.5 sm:flex-row">
             <Field size="lg" className="flex-1" label="School" value={application.school} />
-            <Field size="lg" className="flex-1" label="Major" value={application.major} />
+            <Field size="lg" className="flex-1" label="Major" value={application.major ?? "Not provided"} />
           </div>
           <div className="flex flex-col gap-4.5 sm:flex-row">
-            <Field size="lg" className="flex-1" label="Graduation Date" value={application.graduation} tone="secondary" />
+            <Field size="lg" className="flex-1" label="Graduation Date" value={application.graduation ?? "Not provided"} tone="secondary" />
             <div className="flex-1" />
           </div>
         </ProfileSection>
