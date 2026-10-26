@@ -206,11 +206,11 @@ export default async function AdminApplicationsPage({
     // shouldn't change because someone typed a name in the search box.
     prisma.application.findMany({
       where: { eventId: event.id, status: { not: "SUBMITTED" } },
-      select: { status: true, emailQueue: { select: { emailType: true } } },
+      select: { status: true, source: true, emailQueue: { select: { emailType: true } } },
     }),
   ]);
 
-  const unannounced = decided.filter((d) => needsAnnouncement(d.status, d.emailQueue)).length;
+  const unannounced = decided.filter((d) => needsAnnouncement(d.status, d.source, d.emailQueue)).length;
 
   const countByStatus = Object.fromEntries(STATUSES.map((s) => [s, 0])) as Record<(typeof STATUSES)[number], number>;
   const rsvpCounts: Record<RsvpStatus, number> = { PENDING: 0, CONFIRMED: 0, DECLINED: 0 };
@@ -350,7 +350,7 @@ export default async function AdminApplicationsPage({
                     </span>
                     <span className="hidden truncate text-text-muted md:block">{r.person.email}</span>
                     <span className="hidden truncate md:block">{r.school}</span>
-                    <span className="hidden truncate md:block">{SHORT_LEVEL[r.levelOfStudy] ?? r.levelOfStudy}</span>
+                    <span className="hidden truncate md:block">{r.levelOfStudy ? SHORT_LEVEL[r.levelOfStudy] ?? r.levelOfStudy : "—"}</span>
                     <span>
                       <PixelChip color={STATUS_STYLE[r.status].color}>{STATUS_STYLE[r.status].label}</PixelChip>
                       {r.status === "ACCEPTED" && (

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ApplicationStatus, RsvpStatus } from "@/generated/prisma/client";
+import type { ApplicationSource, ApplicationStatus, RsvpStatus } from "@/generated/prisma/client";
 import clsx from "@/lib/clsx";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -193,7 +193,8 @@ function formatDate(d: Date) {
 }
 
 /** "2027-05" -> "May 2027". Falls back to the raw value for older rows. */
-function formatGraduation(v: string) {
+function formatGraduation(v: string | null) {
+  if (!v) return undefined;
   const m = /^(\d{4})-(\d{2})$/.exec(v);
   if (!m) return v;
   return new Date(Number(m[1]), Number(m[2]) - 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
@@ -255,7 +256,7 @@ export default async function AdminApplicationPage({
           decidedBy={a.decidedBy}
           decidedAt={a.decidedAt}
           announced={announcedEmail(a.status, a.emailQueue)}
-          pendingAnnouncement={needsAnnouncement(a.status, a.emailQueue)}
+          pendingAnnouncement={needsAnnouncement(a.status, a.source, a.emailQueue)}
           blockedReason={
             a.status === "SUBMITTED"
               ? null
@@ -271,9 +272,14 @@ export default async function AdminApplicationPage({
         <PixelCard className="p-0">
           <Section number="01" title="BASICS">
             <Field label="Phone" value={a.person.phoneNum} tone="secondary" />
-            <Field label="Date of Birth" value={formatDate(a.dateOfBirth)} tone="secondary" />
+            <Field
+              label="Date of Birth"
+              value={a.dateOfBirth ? formatDate(a.dateOfBirth) : undefined}
+              placeholder={absent(a.source)}
+              tone="secondary"
+            />
             <Field label="Minor at event" value={a.isMinor ? "Yes — needs MLH minor consent" : "No"} tone="secondary" />
-            <Field label="Country" value={a.country} tone="secondary" />
+            <Field label="Country" value={a.country ?? undefined} placeholder={absent(a.source)} tone="secondary" />
             <Field label="Gender" optional value={a.gender ?? undefined} placeholder="Not given" tone="secondary" />
             <Field label="Race / Ethnicity" optional value={a.raceEthnicity ?? undefined} placeholder="Not given" tone="secondary" />
           </Section>
@@ -282,19 +288,27 @@ export default async function AdminApplicationPage({
 
           <Section number="02" title="SCHOOL">
             <Field label="School" value={a.school} tone="secondary" />
-            <Field label="Level of Study" value={a.levelOfStudy} tone="secondary" />
-            <Field label="Major" value={a.major} tone="secondary" />
-            <Field label="Graduation" value={formatGraduation(a.graduation)} tone="secondary" />
-            <Field label="Shirt Size" value={a.shirtSize} tone="secondary" />
-            <Field label="Dietary Restriction" value={a.diet} tone="secondary" />
+            <Field label="Level of Study" value={a.levelOfStudy ?? undefined} placeholder={absent(a.source)} tone="secondary" />
+            <Field label="Major" value={a.major ?? undefined} placeholder={absent(a.source)} tone="secondary" />
+            <Field label="Graduation" value={formatGraduation(a.graduation)} placeholder={absent(a.source)} tone="secondary" />
+            <Field label="Shirt Size" value={a.shirtSize ?? undefined} placeholder={absent(a.source)} tone="secondary" />
+            <Field label="Dietary Restriction" value={a.diet ?? undefined} placeholder={absent(a.source)} tone="secondary" />
           </Section>
 
           <Divider />
 
           <Section number="03" title="EXPERIENCE">
-            <Field label={applicationCopy.questions[0]} value={a.whyAttend} multiline tone="secondary" />
-            <Field label={applicationCopy.questions[1]} value={a.whatBuild} multiline tone="secondary" />
-            <Field label={applicationCopy.questions[2]} value={a.quirkFact} multiline tone="secondary" />
+            {a.source === "WALK_IN" ? (
+              <p className="text-[12px] leading-[1.7] text-text-faintest">
+                Nothing to show &mdash; the review questions aren&apos;t asked at the door.
+              </p>
+            ) : (
+              <>
+                <Field label={applicationCopy.questions[0]} value={a.whyAttend ?? undefined} multiline tone="secondary" />
+                <Field label={applicationCopy.questions[1]} value={a.whatBuild ?? undefined} multiline tone="secondary" />
+                <Field label={applicationCopy.questions[2]} value={a.quirkFact ?? undefined} multiline tone="secondary" />
+              </>
+            )}
             <Field label="GitHub" optional value={a.gitHub ?? undefined} placeholder="Not given" tone="secondary" />
             <Field label="LinkedIn" optional value={a.linkedIn ?? undefined} placeholder="Not given" tone="secondary" />
           </Section>
@@ -384,6 +398,17 @@ function ResumePanel({
       />
     </div>
   );
+}
+
+/**
+ * What to show where a value is absent.
+ *
+ * On a walk-in almost everything below BASICS is null by design — nobody was
+ * asked (PLAT-56) — so the blank says so rather than reading as missing data
+ * somebody should chase up.
+ */
+function absent(source: ApplicationSource) {
+  return source === "WALK_IN" ? "Not collected — walk-in" : "Not given";
 }
 
 function Section({ number, title, children }: { number: string; title: string; children: React.ReactNode }) {

@@ -1,4 +1,10 @@
-import type { ApplicationStatus, EmailType, EmailStatus, RsvpStatus } from "@/generated/prisma/client";
+import type {
+  ApplicationSource,
+  ApplicationStatus,
+  EmailType,
+  EmailStatus,
+  RsvpStatus,
+} from "@/generated/prisma/client";
 
 /**
  * The rules behind marking a decision (PLAT-39).
@@ -110,8 +116,14 @@ export function planBulkDecision<T extends { id: string; status: ApplicationStat
  */
 export function needsAnnouncement(
   status: ApplicationStatus,
+  source: ApplicationSource,
   emails: readonly { emailType: EmailType }[],
 ): boolean {
+  // A walk-in was admitted in person, at the door, by someone standing in
+  // front of them — there is nothing to announce (PLAT-56). Without this they
+  // land on /admin/applications/send owing an ACCEPTED email and get posted an
+  // acceptance days after the event ended.
+  if (source === "WALK_IN") return false;
   const expected = emailTypeFor(status);
   if (!expected) return false;
   return !emails.some((e) => e.emailType === expected);

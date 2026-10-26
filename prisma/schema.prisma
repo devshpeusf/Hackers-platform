@@ -124,6 +124,18 @@ model Application {
 
   status ApplicationStatus @default(SUBMITTED)
 
+  /// How this application came to exist (PLAT-56).
+  ///
+  /// ONLINE is someone who filled in /apply/form. WALK_IN is someone
+  /// registered at the door by a volunteer, who never applied and never
+  /// answered the review questions — which is why so many columns below are
+  /// nullable. Defaulting to ONLINE keeps every row that predates walk-ins
+  /// correct without a backfill.
+  ///
+  /// Read it before trusting an absence: a null `major` on an ONLINE row would
+  /// be a bug, on a WALK_IN row it's expected.
+  source ApplicationSource @default(ONLINE)
+
   /// Attendance response, separate from the organizer's admission decision.
   /// Only meaningful while status is ACCEPTED. Public responses are final.
   rsvpStatus      RsvpStatus @default(PENDING)
@@ -145,39 +157,51 @@ model Application {
   /// Only ever rendered for the signed-in owner; never put in a URL.
   badgeToken String? @unique
 
+  /// Required for everyone — a walk-in is still asked which school they're
+  /// from, and MLH's 80%-student reporting needs it.
   school       String
-  schoolSource SchoolSource
-  major        String
-  graduation   String
-  levelOfStudy String
-  shirtSize    String
+  /// Null on a WALK_IN: the door form takes a typed school and doesn't make
+  /// anyone search the 13,103-row catalog.
+  schoolSource SchoolSource?
+  /// Null on a WALK_IN. Review inputs and logistics we don't stop to collect
+  /// at the door — ask later if they're needed.
+  major        String?
+  graduation   String?
+  levelOfStudy String?
+  shirtSize    String?
 
-  country       String
+  country       String?
   /// Stored instead of an age: an age column is wrong within a year, and MLH's
   /// 80%-student rule is judged against the event date.
-  dateOfBirth   DateTime
-  /// Computed from dateOfBirth vs. the event's start date at submission time
-  /// — not a self-reported answer, so it can't disagree with the birthdate
-  /// above. HackJam allows minors (MLH's own Minor Policy covers them), this
-  /// just flags who needs the extra consent paperwork so a lead can follow
-  /// up. No dashboard reads this yet; query/filter directly until one exists.
+  ///
+  /// Null on a WALK_IN — a date picker at the door is the opposite of fast, so
+  /// isMinor is asked outright instead of derived from this.
+  dateOfBirth   DateTime?
+  /// Whether they'll be under 18 at the event. Computed from dateOfBirth for
+  /// an ONLINE application — not a self-reported answer, so it can't disagree
+  /// with the birthdate above — and asked as a single question at the door.
+  /// Required either way: HackJam allows minors (MLH's own Minor Policy covers
+  /// them), and this is what flags who needs the extra consent paperwork.
   isMinor       Boolean
   /// Demographics MLH reports on. Optional — nobody is required to answer.
   gender        String?
   raceEthnicity String?
 
-  /// The three short answers.
-  whyAttend String @db.Text
-  whatBuild String @db.Text
-  quirkFact String @db.Text
+  /// The three short answers. Null on a WALK_IN — these are review inputs,
+  /// and a walk-in is admitted at the door rather than reviewed.
+  whyAttend String? @db.Text
+  whatBuild String? @db.Text
+  quirkFact String? @db.Text
 
   /// Collected during the application itself (decided over the earlier
   /// "post-acceptance dashboard" plan — the dashboard is still 100%
   /// placeholder UI, so this is the actual first real question either way).
   /// "No restriction" is a real selectable option, not the absence of an
-  /// answer, so this is required rather than nullable — catering needs a
-  /// headcount for everyone, not just people with a restriction.
-  diet String
+  /// answer — for an ONLINE application this is always set, because catering
+  /// needs a headcount for everyone and not just people with a restriction.
+  /// Null only on a WALK_IN, where nobody is standing at the door working
+  /// through a dropdown.
+  diet String?
 
   /// MLH consent. The first two are required by MLH and enforced in the Zod
   /// schema; marketing is opt-in. agreementsAt matters because MLH versions
@@ -299,4 +323,10 @@ enum RsvpStatus {
 enum SchoolSource {
   catalog
   manual
+}
+
+/// Where an Application came from — see Application.source (PLAT-56).
+enum ApplicationSource {
+  ONLINE
+  WALK_IN
 }
