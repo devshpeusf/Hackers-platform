@@ -57,10 +57,10 @@ test("an email mid-send locks the row too", () => {
 
 // ---- the action ----
 
-function setup({ organizer = true, apps } = {}) {
+function setup({ role = "ORGANIZER", apps } = {}) {
   const db = {
     event: { id: "event-now" },
-    people: { "discord-org": { id: "person-org", role: organizer ? "ORGANIZER" : "APPLICANT" } },
+    people: { "discord-org": { id: "person-org", role } },
     apps: apps ?? [],
   };
   const log = { transactions: 0, updateWhere: null, updateData: null, redirect: null, findWhere: null };
@@ -131,12 +131,19 @@ test("decides the selected applicants and records who and when", async () => {
   assert.match(log.redirect, /bulk=accepted&changed=2/);
 });
 
-test("non-organizers change nothing", async () => {
-  const { actions, db, log } = setup({ organizer: false, apps: [app("a")] });
-  await run(actions, { ids: ["a"], decision: "ACCEPTED" });
-  assert.equal(db.apps[0].status, "SUBMITTED");
-  assert.equal(log.transactions, 0);
-});
+for (const role of ["APPLICANT", "VOLUNTEER"]) {
+  test(`${role} cannot decide applications or queue decision emails`, async () => {
+    const { actions, db, log } = setup({ role, apps: [app("a")] });
+    await run(actions, { ids: ["a"], decision: "ACCEPTED" });
+    await actions.decideApplication(form({ id: "a", decision: "ACCEPTED" }));
+    await actions.queueDecisionEmails(form({ id: "a" }));
+    await actions.queueRsvpInvitation(form({ id: "a" }));
+    assert.equal(db.apps[0].status, "SUBMITTED");
+    assert.equal(log.transactions, 0);
+    assert.equal(log.findWhere, null);
+    assert.equal(log.redirect, null);
+  });
+}
 
 test("ids from another event are ignored and reported", async () => {
   const { actions, db, log } = setup({ apps: [app("mine"), app("other", "SUBMITTED", [], "event-old")] });
