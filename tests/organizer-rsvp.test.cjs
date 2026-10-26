@@ -30,11 +30,13 @@ const userLib = load("src/lib/supabase/user.ts", {});
 const siteUrl = load("src/lib/site-url.ts", {}, { URL });
 const statuses = load("src/app/admin/applications/status.ts", {});
 const clsx = load("src/lib/clsx.ts", {});
+const portal = load("src/lib/portal-access.ts", {});
 const link = { __esModule: true, default: ({ children, ...props }) => jsx.jsx("a", { ...props, children }) };
 const card = { __esModule: true, default: ({ children, className }) => jsx.jsx("div", { className, children }) };
 const chip = { __esModule: true, default: ({ children }) => jsx.jsx("span", { children }) };
 
 const app = (id = "app-a", status = "ACCEPTED", rsvpStatus = "CONFIRMED", eventId = "event-now") => ({
+  badgeToken: status === "ACCEPTED" ? crypto.randomBytes(32).toString("base64url") : null,
   id, status, rsvpStatus, eventId, personId: `person-${id}`, decidedAt: new Date(NOW - 60_000),
   rsvpRespondedAt: rsvpStatus === "PENDING" ? null : new Date(NOW - 1000), createdAt: new Date(NOW - 100_000),
   dateOfBirth: new Date("2000-01-01"), agreementsAt: new Date(NOW - 100_000), graduation: "2027-05",
@@ -56,10 +58,10 @@ function project(row, select) {
 const matches = (value, condition) => condition === undefined || (typeof condition === "object" && condition !== null
   ? (condition.in ? condition.in.includes(value) : value !== condition.not) : value === condition);
 
-function setup({ applications = [app()], emails = [], organizer = true, signedIn = true, authError = null, revokeError = false, beforeDecisionWrite } = {}) {
+function setup({ applications = [app()], emails = [], organizer = true, signedIn = true, authError = null, revokeError = false, beforeDecisionWrite, failBadgeWriteAt = 0 } = {}) {
   const db = { apps: new Map(applications.map((a) => [a.id, structuredClone(a)])), queue: structuredClone(emails), tokens: [] };
   const clock = { now: NOW };
-  const calls = { locks: [], writes: [], revocations: [], queueWrites: [], transactions: 0, queries: [], sends: [], emailProps: [], logs: [] };
+  const calls = { locks: [], writes: [], revocations: [], queueWrites: [], transactions: 0, queries: [], sends: [], emailProps: [], logs: [], badgeRandomBytes: [], badgeWrites: [], commits: [] };
   class ServerDate extends Date {
     constructor(...args) { super(...(args.length ? args : [clock.now])); }
     static now() { return clock.now; }
@@ -69,11 +71,19 @@ function setup({ applications = [app()], emails = [], organizer = true, signedIn
   const auth = { createClient: async () => ({ auth: { getUser: async () => ({ data: { user }, error: authError }) } }) };
   const fullApp = (a) => a ? { ...a, emailQueue: db.queue.filter((e) => e.applicationId === a.id), rsvpTokens: db.tokens.filter((t) => t.applicationId === a.id) } : null;
   const matchesApp = (a, where) => matches(a.id, where.id) && matches(a.eventId, where.eventId) && matches(a.status, where.status) &&
+    matches(a.badgeToken, where.badgeToken) &&
     matches(a.rsvpStatus, where.rsvpStatus) && !(where.NOT?.OR ?? []).some((rule) => rule.status === a.status &&
       db.queue.some((e) => e.applicationId === a.id && e.emailType === rule.emailQueue.some.emailType && rule.emailQueue.some.status.in.includes(e.status))) &&
     (!where.rsvpTokens || db.tokens.some((t) => t.applicationId === a.id && t.tokenHash === where.rsvpTokens.some.tokenHash &&
       t.revokedAt === null && t.expiresAt > where.rsvpTokens.some.expiresAt.gt));
   const changeApplications = async (query) => {
+    if (query.data.badgeToken) {
+      calls.badgeWrites.push(query);
+      if (calls.badgeWrites.length === failBadgeWriteAt) {
+        throw Object.assign(new Error(`Synthetic uniqueness failure: ${query.data.badgeToken}`), { code: "P2002" });
+      }
+      assert.ok(![...db.apps.values()].some((a) => a.badgeToken === query.data.badgeToken), "Distinct badge credentials");
+    }
     if (beforeDecisionWrite && query.data.status) await beforeDecisionWrite({ db });
     calls.writes.push(query);
     const changed = [];
@@ -159,7 +169,11 @@ function setup({ applications = [app()], emails = [], organizer = true, signedIn
       if (Array.isArray(values[0])) assert.match(sql, /ORDER BY "id" FOR UPDATE/);
       return ids.filter((id) => db.apps.has(id) && (!values[1] || db.apps.get(id).eventId === values[1])).map((id) => ({ id }));
     } };
-    try { return await run(tx); }
+    try {
+      const result = await run(tx);
+      calls.commits.push(structuredClone([...db.apps.values()]));
+      return result;
+    }
     catch (error) { Object.assign(db, saved); throw error; }
     finally { release(); }
   }, $queryRaw: async (strings, limit) => {
@@ -169,8 +183,12 @@ function setup({ applications = [app()], emails = [], organizer = true, signedIn
     return rows.map(({ id }) => ({ id }));
   } };
   const rsvp = load("src/lib/rsvp.ts", { "server-only": {}, "node:crypto": crypto, "@/lib/prisma": { prisma } }, { Date: ServerDate });
+  const badge = load("src/lib/badge.ts", {
+    "server-only": {}, "qrcode": require("qrcode"), "@/lib/prisma": { prisma }, "@/lib/portal-access": portal,
+    "node:crypto": { randomBytes: (size) => { calls.badgeRandomBytes.push(size); return crypto.randomBytes(size); } },
+  });
   const actions = load("src/app/admin/applications/actions.ts", {
-    "@/lib/prisma": { prisma }, "@/lib/rsvp": rsvp, "@/lib/site-url": siteUrl, "@/lib/decisions": decisions,
+    "@/lib/prisma": { prisma }, "@/lib/rsvp": rsvp, "@/lib/badge": badge, "@/lib/site-url": siteUrl, "@/lib/decisions": decisions,
     "@/lib/supabase/server": auth, "@/lib/supabase/user": userLib,
     "next/cache": { revalidatePath: () => {} }, "next/navigation": { redirect: (url) => { throw new Error(`REDIRECT:${url}`); } },
   }, { process: { env }, Date: ServerDate, URLSearchParams });
@@ -207,6 +225,97 @@ function setup({ applications = [app()], emails = [], organizer = true, signedIn
   const renderAdmin = async (filters = {}) => renderToStaticMarkup(await admin.default({ searchParams: Promise.resolve(filters) }));
   return { db, clock, env, calls, rsvp, actions, runAction, runWorker, renderAdmin, prisma, auth, pageModules };
 }
+
+// Badge lifecycle: exercise the actual decision actions and issuance helper in
+// the same rollback-capable transaction mock used for RSVP consistency.
+for (const mode of ["decideApplication", "decideApplications"]) {
+  for (const status of ["SUBMITTED", "WAITLISTED", "REJECTED"]) {
+    test(`${mode}: ${status} acceptance issues a badge before the transaction completes`, async () => {
+      const s = setup({ applications: [app("fresh", status)] });
+      assert.equal(s.db.apps.get("fresh").badgeToken, null);
+      await s.runAction(mode, { id: "fresh", ids: ["fresh"], decision: "ACCEPTED" });
+      const accepted = s.calls.commits.at(-1).find((a) => a.id === "fresh");
+      assert.equal(accepted.status, "ACCEPTED");
+      assert.match(accepted.badgeToken, /^[A-Za-z0-9_-]{43}$/);
+      assert.deepEqual(s.calls.badgeRandomBytes, [32]);
+      assert.equal(s.calls.transactions, 1);
+      assert.equal(s.calls.locks.length, 1);
+      assert.equal(s.db.tokens.length, 0, "Badge and RSVP issuance remain separate");
+      assert.equal(s.db.queue.length, 0);
+    });
+  }
+
+  for (const decision of ["WAITLISTED", "REJECTED"]) {
+    test(`${mode}: ${decision} decisions and untouched SUBMITTED applications never issue badges`, async () => {
+      const s = setup({ applications: [app("changed", "SUBMITTED"), app("untouched", "SUBMITTED")] });
+      await s.runAction(mode, { id: "changed", ids: ["changed"], decision });
+      assert.equal(s.db.apps.get("changed").status, decision);
+      assert.equal(s.db.apps.get("untouched").status, "SUBMITTED");
+      assert.ok([...s.db.apps.values()].every((a) => a.badgeToken === null));
+      assert.equal(s.calls.badgeWrites.length, 0);
+      assert.equal(s.calls.badgeRandomBytes.length, 0);
+    });
+  }
+
+  test(`${mode}: withdrawal and re-acceptance preserve the original badge, including no-op acceptance`, async () => {
+    for (const decision of ["WAITLISTED", "REJECTED"]) {
+      const s = setup();
+      const token = s.db.apps.get("app-a").badgeToken;
+      await s.runAction(mode, { id: "app-a", ids: ["app-a"], decision });
+      assert.equal(s.db.apps.get("app-a").badgeToken, token);
+      await s.runAction(mode, { id: "app-a", ids: ["app-a"], decision: "ACCEPTED" });
+      await s.runAction(mode, { id: "app-a", ids: ["app-a"], decision: "ACCEPTED" });
+      assert.equal(s.db.apps.get("app-a").badgeToken, token);
+      assert.equal(s.calls.badgeRandomBytes.length, 0);
+      assert.equal(s.calls.badgeWrites.length, 0);
+    }
+  });
+
+  test(`${mode}: a badge uniqueness failure rolls back admission and response changes without leaking the credential`, async () => {
+    const s = setup({ applications: [app("fresh", "WAITLISTED", "DECLINED")], failBadgeWriteAt: 1 });
+    const before = plain([...s.db.apps.values()]);
+    await assert.rejects(s.runAction(mode, { id: "fresh", ids: ["fresh"], decision: "ACCEPTED" }), (error) => {
+      assert.equal(error.message, "Badge issuance failed. Acceptance was not saved.");
+      assert.ok(!error.stack.includes(s.calls.badgeWrites[0].data.badgeToken));
+      assert.equal(error.cause, undefined);
+      return true;
+    });
+    assert.deepEqual(plain([...s.db.apps.values()]), before);
+    assert.equal(s.calls.commits.length, 0);
+    assert.equal(s.db.tokens.length, 0);
+  });
+}
+
+test("individual acceptance overrides retain the email guard and issue a badge only after explicit override", async () => {
+  const s = setup({ applications: [app("fresh", "REJECTED")], emails: [email("fresh", "SENT", "REJECTED")] });
+  assert.match(await s.runAction("decideApplication", { id: "fresh", decision: "ACCEPTED" }), /decision=locked/);
+  assert.equal(s.calls.badgeRandomBytes.length, 0);
+  await s.runAction("decideApplication", { id: "fresh", decision: "ACCEPTED", override: "true" });
+  assert.match(s.db.apps.get("fresh").badgeToken, /^[A-Za-z0-9_-]{43}$/);
+});
+
+test("bulk acceptance issues distinct badges only for changed, unlocked applications in the current event", async () => {
+  const s = setup({ applications: [app("a", "SUBMITTED"), app("b", "WAITLISTED"), app("same"), app("locked", "REJECTED"), app("old", "SUBMITTED", "PENDING", "event-old")],
+    emails: [email("locked", "SENT", "REJECTED")] });
+  const existing = s.db.apps.get("same").badgeToken;
+  await s.runAction("decideApplications", { ids: ["a", "b", "same", "locked", "old"], decision: "ACCEPTED", override: "true" });
+  const tokens = ["a", "b", "same"].map((id) => s.db.apps.get(id).badgeToken);
+  assert.ok(tokens.every((token) => /^[A-Za-z0-9_-]{43}$/.test(token)));
+  assert.equal(new Set(tokens).size, 3);
+  assert.equal(s.db.apps.get("same").badgeToken, existing);
+  assert.equal(s.db.apps.get("locked").badgeToken, null);
+  assert.equal(s.db.apps.get("old").badgeToken, null);
+  assert.equal(s.calls.badgeWrites.length, 2);
+});
+
+test("failure on the second bulk badge rolls back the first badge and every acceptance", async () => {
+  const s = setup({ applications: [app("a", "SUBMITTED"), app("b", "WAITLISTED")], failBadgeWriteAt: 2 });
+  const before = plain([...s.db.apps.values()]);
+  await assert.rejects(s.runAction("decideApplications", { ids: ["a", "b"], decision: "ACCEPTED" }), /Acceptance was not saved/);
+  assert.equal(s.calls.badgeWrites.length, 2);
+  assert.deepEqual(plain([...s.db.apps.values()]), before);
+  assert.equal(s.calls.commits.length, 0);
+});
 
 for (const decision of ["WAITLISTED", "REJECTED"]) {
   test(`individual ACCEPTED to ${decision} revokes every active retry link and retains the recorded response`, async () => {

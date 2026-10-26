@@ -3,6 +3,8 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import QRCode from "qrcode";
 import { prisma } from "@/lib/prisma";
+import { canEnterPortal } from "@/lib/portal-access";
+import type { Prisma } from "@/generated/prisma/client";
 
 /**
  * The check-in badge: a random opaque token per admitted hacker, rendered as
@@ -21,32 +23,31 @@ function newToken() {
 }
 
 /**
- * The application's badge token, created on first use. Created lazily rather
- * than at acceptance so this doesn't depend on how decisions get marked.
+ * Issue a badge inside the decision transaction, after changing admission to
+ * ACCEPTED. The caller must already hold the application's row lock. Reuse
+ * any existing credential, including one from a previous acceptance cycle.
  *
- * Safe under concurrency: two tabs loading at once both try to set it, but
- * the write only lands while the column is still empty, and both then read
- * back whichever token won.
+ * A uniqueness or assignment failure aborts the whole decision transaction.
+ * No retry is needed for 256-bit randomness; never swallow the failure or
+ * include Prisma's potentially credential-bearing error in logs/errors.
  */
-export async function getOrCreateBadgeToken(applicationId: string): Promise<string> {
-  const existing = await prisma.application.findUnique({
-    where: { id: applicationId },
-    select: { badgeToken: true },
-  });
-  if (!existing) throw new Error("Application not found for badge");
-  if (existing.badgeToken) return existing.badgeToken;
+export async function ensureBadgeToken(applicationId: string, tx: Prisma.TransactionClient): Promise<void> {
+  try {
+    const application = await tx.application.findUnique({
+      where: { id: applicationId },
+      select: { status: true, badgeToken: true },
+    });
+    if (!application || application.status !== "ACCEPTED") throw new Error("Badge unavailable");
+    if (application.badgeToken) return;
 
-  await prisma.application.updateMany({
-    where: { id: applicationId, badgeToken: null },
-    data: { badgeToken: newToken() },
-  });
-
-  const created = await prisma.application.findUnique({
-    where: { id: applicationId },
-    select: { badgeToken: true },
-  });
-  if (!created?.badgeToken) throw new Error("Badge token was not saved");
-  return created.badgeToken;
+    const updated = await tx.application.updateMany({
+      where: { id: applicationId, status: "ACCEPTED", badgeToken: null },
+      data: { badgeToken: newToken() },
+    });
+    if (updated.count !== 1) throw new Error("Badge was not saved");
+  } catch {
+    throw new Error("Badge issuance failed. Acceptance was not saved.");
+  }
 }
 
 /** The theme's deep navy — dark enough against white for any scanner (~19:1). */
@@ -68,9 +69,14 @@ const QUIET = 4;
  * Stays dark-on-light: many phone cameras fail on an inverted code even
  * though it would match the dark theme better.
  */
-export async function getBadgeSvg(applicationId: string): Promise<string> {
-  const token = await getOrCreateBadgeToken(applicationId);
-  return renderBadgeSvg(token);
+export async function getBadgeSvg(applicationId: string): Promise<string | null> {
+  const application = await prisma.application.findUnique({
+    where: { id: applicationId },
+    select: { status: true, rsvpStatus: true, badgeToken: true },
+  });
+  if (!application || !canEnterPortal(application)) throw new Error("Badge unavailable");
+  // Missing issuance shows an organizer-contact message, never a dashboard write.
+  return application.badgeToken ? renderBadgeSvg(application.badgeToken) : null;
 }
 
 export function renderBadgeSvg(token: string): string {
