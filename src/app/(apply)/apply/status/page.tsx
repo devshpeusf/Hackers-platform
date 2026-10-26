@@ -91,7 +91,7 @@ export default async function ApplicationStatusPage() {
           status={application.status}
           rsvpStatus={application.rsvpStatus}
           event={application.event}
-          className="mb-6 p-6"
+          className="mb-6 card-pad"
         />
 
         {/* MLH registration — the one thing still outstanding */}
