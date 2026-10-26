@@ -21,7 +21,7 @@ type DashboardProps = {
   event: { name: string; startDate: Date; endDate: Date; venueName: string | null };
   diet: string;
   /** The hacker's own check-in QR, rendered server-side (src/lib/badge.ts). */
-  badgeSvg: string;
+  badgeSvg: string | null;
 };
 
 export default function Dashboard({ fullName, status, rsvpStatus, event, diet, badgeSvg }: DashboardProps) {
@@ -90,25 +90,33 @@ export default function Dashboard({ fullName, status, rsvpStatus, event, diet, b
               // DIGITAL PASS
             </span>
             <div className="my-4.5 text-base font-bold">{fullName.toUpperCase()}</div>
-            {/* White plate behind the code: scanners need dark-on-light, and
-                the SVG's own white quiet zone needs to read as part of it. */}
-            <div className="w-full max-w-[240px] overflow-hidden rounded-2xl bg-white shadow-[0_0_0_4px_rgba(197,139,255,0.18),0_0_32px_rgba(197,139,255,0.28)]">
-              <div
-                role="img"
-                aria-label="Your check-in QR code"
-                className="p-1 [&>svg]:block [&>svg]:h-auto [&>svg]:w-full"
-                dangerouslySetInnerHTML={{ __html: badgeSvg }}
-              />
-              <div className="flex items-center justify-between border-t border-dashed border-[#120f1f]/20 px-4 py-2 font-pixel text-[7px] tracking-widest text-[#120f1f]/60">
-                <span>ADMIT ONE</span>
-                <span>HACKJAM &apos;26</span>
-              </div>
-            </div>
-            <div className="mt-4 text-center text-[11px] leading-[1.7] text-text-muted">
-              Show this at check-in. Turn your screen brightness up if it won&apos;t scan.
-              <br />
-              It&apos;s yours only, so don&apos;t share it.
-            </div>
+            {badgeSvg ? (
+              <>
+                {/* White plate behind the code: scanners need dark-on-light, and
+                    the SVG's own white quiet zone needs to read as part of it. */}
+                <div className="w-full max-w-[240px] overflow-hidden rounded-2xl bg-white shadow-[0_0_0_4px_rgba(197,139,255,0.18),0_0_32px_rgba(197,139,255,0.28)]">
+                  <div
+                    role="img"
+                    aria-label="Your check-in QR code"
+                    className="p-1 [&>svg]:block [&>svg]:h-auto [&>svg]:w-full"
+                    dangerouslySetInnerHTML={{ __html: badgeSvg }}
+                  />
+                  <div className="flex items-center justify-between border-t border-dashed border-[#120f1f]/20 px-4 py-2 font-pixel text-[7px] tracking-widest text-[#120f1f]/60">
+                    <span>ADMIT ONE</span>
+                    <span>HACKJAM &apos;26</span>
+                  </div>
+                </div>
+                <div className="mt-4 text-center text-[11px] leading-[1.7] text-text-muted">
+                  Show this at check-in. Turn your screen brightness up if it won&apos;t scan.
+                  <br />
+                  It&apos;s yours only, so don&apos;t share it.
+                </div>
+              </>
+            ) : (
+              <p role="status" className="text-center text-[13px] leading-[1.7] text-accent-amber">
+                Your badge is unavailable. Please contact an organizer before check-in.
+              </p>
+            )}
           </PixelCard>
         </div>
 
