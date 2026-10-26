@@ -111,11 +111,21 @@ test("browser manifest, local video fallback, pause/rearm, offline failure and c
   const tempRoot = path.resolve(os.tmpdir());
   const profile = fs.mkdtempSync(path.join(tempRoot, "hackjam-scanner-browser-"));
   let browser, socket, command;
+  const pending = new Map();
+  let lastSuccessfulCommand = null;
+  const rejectPending = (reason) => {
+    for (const [id, call] of pending) {
+      pending.delete(id);
+      clearTimeout(call.timer);
+      call.reject(new Error(`${reason}: ${call.method} (last successful command: ${lastSuccessfulCommand ?? "none"})`));
+    }
+  };
   const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
   try {
     browser = spawn(edge, ["--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check", "--disable-background-networking",
       `--user-data-dir=${profile}`, "--remote-debugging-port=0", "about:blank"], { windowsHide: true });
     browser.stdout.resume(); browser.stderr.resume();
+    browser.on("exit", (code, signal) => rejectPending(`Browser exited (code ${code}, signal ${signal})`));
     let startupError;
     browser.on("error", error => { startupError = error; });
     const portFile = path.join(profile, "DevToolsActivePort");
@@ -124,16 +134,28 @@ test("browser manifest, local video fallback, pause/rearm, offline failure and c
     const [port, socketPath] = fs.readFileSync(portFile, "utf8").trim().split(/\r?\n/);
     socket = new WebSocket(`ws://127.0.0.1:${port}${socketPath}`);
     await new Promise((resolve, reject) => { socket.addEventListener("open", resolve, { once: true }); socket.addEventListener("error", reject, { once: true }); });
-    const pending = new Map(); let id = 0;
+    socket.addEventListener("close", () => rejectPending("Browser connection closed"));
+    let id = 0;
     socket.addEventListener("message", event => {
       const response = JSON.parse(event.data);
       const call = pending.get(response.id);
-      if (call) { pending.delete(response.id); clearTimeout(call.timer); response.error ? call.reject(new Error("Browser protocol failure")) : call.resolve(response.result); }
+      if (call) {
+        pending.delete(response.id); clearTimeout(call.timer);
+        if (response.error) {
+          call.reject(new Error(`Browser protocol failure: ${call.method} (code ${response.error.code})`));
+        } else {
+          lastSuccessfulCommand = call.method;
+          call.resolve(response.result);
+        }
+      }
     });
     command = (method, params = {}, sessionId) => new Promise((resolve, reject) => {
       const callId = ++id;
-      const timer = setTimeout(() => { pending.delete(callId); reject(new Error("Browser protocol timed out")); }, 18000);
-      pending.set(callId, { resolve, reject, timer });
+      const timer = setTimeout(() => {
+        pending.delete(callId);
+        reject(new Error(`Browser protocol timed out: ${method} (last successful command: ${lastSuccessfulCommand ?? "none"})`));
+      }, 18000);
+      pending.set(callId, { resolve, reject, timer, method });
       socket.send(JSON.stringify({ id: callId, method, params, sessionId }));
     });
     const { targetId } = await command("Target.createTarget", { url: "about:blank" });

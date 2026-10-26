@@ -3,7 +3,8 @@
 // the organizer-only save, and the page reading the hacker's own event.
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { readFileSync } = require("node:fs");
+const { readFileSync, readdirSync } = require("node:fs");
+const { join } = require("node:path");
 const vm = require("node:vm");
 const ts = require("typescript");
 
@@ -248,9 +249,22 @@ test("/help is gone: no nav item, and the old URL redirects to the box after the
 });
 
 test("no page still links to /help or to nowhere", () => {
-  const { execSync } = require("node:child_process");
-  const hits = execSync("grep -rn -e 'href=\"/help\"' -e 'href=\"#\"' src || true", { encoding: "utf8" }).trim();
-  assert.equal(hits, "");
+  const hits = [];
+  function inspect(directory) {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const filePath = join(directory, entry.name);
+      if (entry.isDirectory()) {
+        inspect(filePath);
+      } else if (entry.isFile()) {
+        const lines = readFileSync(filePath, "utf8").split(/\r?\n/);
+        lines.forEach((line, index) => {
+          if (/href="(?:\/help|#)"/.test(line)) hits.push(`${filePath}:${index + 1}:${line}`);
+        });
+      }
+    }
+  }
+  inspect("src");
+  assert.deepEqual(hits, []);
 });
 
 test("the dashboard contact box uses the event's real contacts, not placeholders", () => {

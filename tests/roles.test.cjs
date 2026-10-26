@@ -28,7 +28,7 @@ function user(discordId = "discord-me") {
   };
 }
 
-function setup({ role = "APPLICANT", currentUser = user(), authError = null } = {}) {
+function setup({ role = "APPLICANT", currentUser = user(), authError = null, lookupError = null } = {}) {
   const lookups = [];
   const modules = {
     "next/navigation": {
@@ -37,6 +37,7 @@ function setup({ role = "APPLICANT", currentUser = user(), authError = null } = 
     },
     "@/lib/prisma": { prisma: { person: { findUnique: async (args) => {
       lookups.push(JSON.parse(JSON.stringify(args)));
+      if (lookupError) throw lookupError;
       return role === null ? null : { role };
     } } } },
     "@/lib/supabase/server": { createClient: async () => ({ auth: {
@@ -83,11 +84,11 @@ test("a Discord identity without a Person row has no staff access", async () => 
 });
 
 test("a role lookup failure propagates instead of granting access", async () => {
-  const modules = { "@/lib/prisma": { prisma: { person: {
-    findUnique: async () => { throw new Error("DATABASE_UNAVAILABLE"); },
-  } } } };
-  const { isVolunteerOrAbove } = load("src/lib/volunteer.ts", modules);
+  const { isVolunteerOrAbove, lookups } = setup({ lookupError: new Error("DATABASE_UNAVAILABLE") });
   await assert.rejects(isVolunteerOrAbove("discord-me"), /DATABASE_UNAVAILABLE/);
+  assert.deepEqual(lookups, [
+    { where: { discordId: "discord-me" }, select: { role: true } },
+  ]);
 });
 
 for (const role of ["APPLICANT", "VOLUNTEER"]) {
