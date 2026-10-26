@@ -28,11 +28,10 @@ model Person {
   /// again with a different email would become a second Person.
   discordId String @unique
 
-  /// Everyone who signs in is an APPLICANT by default. There's no
-  /// self-serve path to ORGANIZER — it's set by hand in the DB for the
-  /// people running the event. This is the seed for the full organizer
-  /// dashboard on the roadmap (see CLAUDE.md); the email queue admin page
-  /// is the first thing that reads it.
+  /// Everyone who signs in is an APPLICANT by default. VOLUNTEER and
+  /// ORGANIZER are assigned by hand in the DB; there's no self-serve
+  /// promotion path. Volunteers have event-day staff access only where
+  /// explicitly allowed; organizer-only access still requires ORGANIZER.
   role PersonRole @default(APPLICANT)
 
   firstName String
@@ -279,6 +278,7 @@ enum EmailStatus {
 
 enum PersonRole {
   APPLICANT
+  VOLUNTEER
   ORGANIZER
 }
 

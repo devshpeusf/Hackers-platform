@@ -6,10 +6,11 @@ const assert = require("node:assert/strict");
 const { readFileSync } = require("node:fs");
 const vm = require("node:vm");
 const ts = require("typescript");
+const crypto = require("node:crypto");
 
 function load(path, modules) {
   const compiled = ts.transpileModule(readFileSync(path, "utf8"), {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, esModuleInterop: true },
   }).outputText;
   // Web globals the real server runtime provides.
   const context = { exports: {}, URLSearchParams, require: (name) => {
@@ -57,18 +58,26 @@ test("an email mid-send locks the row too", () => {
 
 // ---- the action ----
 
-function setup({ organizer = true, apps } = {}) {
+function setup({ role = "ORGANIZER", apps } = {}) {
   const db = {
     event: { id: "event-now" },
-    people: { "discord-org": { id: "person-org", role: organizer ? "ORGANIZER" : "APPLICANT" } },
+    people: { "discord-org": { id: "person-org", role } },
     apps: apps ?? [],
   };
-  const log = { transactions: 0, updateWhere: null, updateData: null, redirect: null, findWhere: null };
+  const log = { transactions: 0, updateWhere: null, updateData: null, redirect: null, findWhere: null, badgeWrites: [] };
 
   const prisma = {
     person: { findUnique: async ({ where }) => db.people[where.discordId] ?? null },
     event: { findFirst: async () => db.event },
     application: {
+      findUnique: async ({ where }) => db.apps.find((a) => a.id === where.id) ?? null,
+      updateMany: async ({ where, data }) => {
+        log.badgeWrites.push({ where, data });
+        const application = db.apps.find((a) => a.id === where.id && a.status === where.status && a.badgeToken === where.badgeToken);
+        if (!application) return { count: 0 };
+        Object.assign(application, data);
+        return { count: 1 };
+      },
       findMany: async ({ where }) => {
         log.findWhere = where;
         return db.apps.filter((a) => where.id.in.includes(a.id) && a.eventId === where.eventId).map((a) => ({ ...a }));
@@ -87,9 +96,21 @@ function setup({ organizer = true, apps } = {}) {
       },
     },
     $queryRaw: async () => [],
-    $transaction: async (fn) => { log.transactions++; return fn(prisma); },
+    $transaction: async (fn) => {
+      log.transactions++;
+      const before = new Map(db.apps.map((a) => [a.id, a.status]));
+      const result = await fn(prisma);
+      for (const a of db.apps) if (a.status === "ACCEPTED" && before.get(a.id) !== "ACCEPTED") {
+        assert.match(a.badgeToken, /^[A-Za-z0-9_-]{43}$/, "Badge exists before commit");
+      }
+      return result;
+    },
   };
 
+  const badge = load("src/lib/badge.ts", {
+    "server-only": {}, "node:crypto": crypto, qrcode: require("qrcode"), "@/lib/prisma": { prisma },
+    "@/lib/portal-access": load("src/lib/portal-access.ts", {}),
+  });
   const actions = load("src/app/admin/applications/actions.ts", {
     "next/cache": { revalidatePath: () => {} },
     "next/navigation": { redirect: (url) => { log.redirect = url; throw new Error("REDIRECT"); } },
@@ -101,6 +122,7 @@ function setup({ organizer = true, apps } = {}) {
     } } }) } }) },
     "@/lib/supabase/user": userLib,
     "@/lib/decisions": decisions,
+    "@/lib/badge": badge,
     "@/lib/rsvp": { revokeRsvpTokens: () => assert.fail("No accepted withdrawal in these fixtures") },
     "@/lib/site-url": {},
   });
@@ -117,7 +139,10 @@ async function run(actions, fields) {
   try { await actions.decideApplications(form(fields)); } catch (e) { if (e.message !== "REDIRECT") throw e; }
 }
 
-const app = (id, status = "SUBMITTED", emailQueue = [], eventId = "event-now") => ({ id, status, emailQueue, eventId });
+const app = (id, status = "SUBMITTED", emailQueue = [], eventId = "event-now") => ({
+  id, status, emailQueue, eventId,
+  badgeToken: status === "ACCEPTED" ? crypto.randomBytes(32).toString("base64url") : null,
+});
 
 test("decides the selected applicants and records who and when", async () => {
   const { actions, db, log } = setup({ apps: [app("a"), app("b")] });
@@ -128,15 +153,26 @@ test("decides the selected applicants and records who and when", async () => {
   assert.equal(Object.prototype.toString.call(log.updateData.decidedAt), "[object Date]");
   assert.ok(Math.abs(log.updateData.decidedAt.getTime() - Date.now()) < 5000);
   assert.equal(log.transactions, 1);
+  assert.equal(log.badgeWrites.length, 2);
+  assert.equal(new Set(db.apps.map((a) => a.badgeToken)).size, 2);
   assert.match(log.redirect, /bulk=accepted&changed=2/);
 });
 
-test("non-organizers change nothing", async () => {
-  const { actions, db, log } = setup({ organizer: false, apps: [app("a")] });
-  await run(actions, { ids: ["a"], decision: "ACCEPTED" });
-  assert.equal(db.apps[0].status, "SUBMITTED");
-  assert.equal(log.transactions, 0);
-});
+for (const role of ["APPLICANT", "VOLUNTEER"]) {
+  test(`${role} cannot decide applications or queue decision emails`, async () => {
+    const { actions, db, log } = setup({ role, apps: [app("a")] });
+    await run(actions, { ids: ["a"], decision: "ACCEPTED" });
+    await actions.decideApplication(form({ id: "a", decision: "ACCEPTED" }));
+    await actions.queueDecisionEmails(form({ id: "a" }));
+    await actions.queueRsvpInvitation(form({ id: "a" }));
+    assert.equal(db.apps[0].status, "SUBMITTED");
+    assert.equal(db.apps[0].badgeToken, null);
+    assert.equal(log.badgeWrites.length, 0);
+    assert.equal(log.transactions, 0);
+    assert.equal(log.findWhere, null);
+    assert.equal(log.redirect, null);
+  });
+}
 
 test("ids from another event are ignored and reported", async () => {
   const { actions, db, log } = setup({ apps: [app("mine"), app("other", "SUBMITTED", [], "event-old")] });
@@ -197,4 +233,13 @@ test("returnTo can't send the organizer off-site", async () => {
   const { actions, log } = setup({ apps: [app("a")] });
   await run(actions, { ids: ["a"], decision: "ACCEPTED", returnTo: "https://evil.example/admin/applications" });
   assert.match(log.redirect, /^\/admin\/applications\?/);
+});
+
+test("the largest permitted bulk acceptance issues a distinct badge for every applicant before commit", async () => {
+  const apps = Array.from({ length: decisions.BULK_LIMIT }, (_, i) => app(`application-${i}`));
+  const { actions, db, log } = setup({ apps });
+  await run(actions, { ids: apps.map((a) => a.id), decision: "ACCEPTED" });
+  assert.ok(db.apps.every((a) => a.status === "ACCEPTED" && /^[A-Za-z0-9_-]{43}$/.test(a.badgeToken)));
+  assert.equal(new Set(db.apps.map((a) => a.badgeToken)).size, decisions.BULK_LIMIT);
+  assert.equal(log.transactions, 1);
 });
