@@ -1,5 +1,6 @@
 import PageHeading from "@/components/ui/PageHeading";
 import PixelCard from "@/components/ui/PixelCard";
+import CopyEmail from "@/components/CopyEmail";
 import { getCurrentHacker } from "@/lib/current-hacker";
 import { DEFAULT_CODE_OF_CONDUCT_URL, mapsUrl, parseLocations } from "@/lib/event-guide";
 
@@ -28,8 +29,8 @@ export default async function GuidePage() {
           up the difference, so the bottoms line up. One column below lg. */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
         <div className="flex flex-col gap-6">
-          <PixelCard borderColor="var(--color-accent-teal)" className="flex-1 p-7 lg:p-8">
-            <span className="font-pixel text-[10px] tracking-wide text-accent-teal">VENUE &amp; PARKING</span>
+          <PixelCard borderColor="var(--color-accent-teal)" className="flex-1 card-pad">
+            <span className="card-title text-accent-teal">VENUE &amp; PARKING</span>
             <dl className="mt-5 flex flex-col">
               {locations.length === 0 ? (
                 <Row label="VENUE">
@@ -38,14 +39,14 @@ export default async function GuidePage() {
               ) : (
                 locations.map((loc, i) => (
                   <Row key={`${i}-${loc.label}`} label={loc.label.toUpperCase()}>
-                    <span className="text-[17px] font-bold text-text-primary">{loc.place}</span>
-                    {loc.note && <span className="text-[14px] leading-[1.7] text-text-secondary">{loc.note}</span>}
+                    <span className="card-value text-text-primary">{loc.place}</span>
+                    {loc.note && <span className="card-meta text-text-secondary">{loc.note}</span>}
                     {loc.address && (
                       <a
                         href={mapsUrl(loc.address)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[14px] text-accent-teal underline-offset-4 hover:underline"
+                        className="card-meta text-accent-teal underline-offset-4 hover:underline"
                       >
                         {loc.address} &rarr;
                       </a>
@@ -55,11 +56,11 @@ export default async function GuidePage() {
               )}
               <Row label="PARKING">
                 {event.parkingInfo ? (
-                  <span className="whitespace-pre-line text-[15px] leading-[1.7] text-text-secondary">{event.parkingInfo}</span>
+                  <span className="whitespace-pre-line card-text text-text-secondary">{event.parkingInfo}</span>
                 ) : (
                   <>
-                    <span className="text-[15px] font-bold text-accent-amber">To be announced</span>
-                    <span className="text-[14px] leading-[1.7] text-text-muted">
+                    <span className="card-text font-bold text-accent-amber">To be announced</span>
+                    <span className="card-meta text-text-muted">
                       We&apos;ll post parking details here before the event.
                     </span>
                   </>
@@ -68,9 +69,9 @@ export default async function GuidePage() {
             </dl>
           </PixelCard>
 
-          <PixelCard borderColor="var(--color-accent-amber)" className="p-7 lg:p-8">
-            <span className="font-pixel text-[10px] tracking-wide text-accent-amber">CODE OF CONDUCT</span>
-            <div className="mt-4 text-[15px] leading-[1.8]">
+          <PixelCard borderColor="var(--color-accent-amber)" className="card-pad">
+            <span className="card-title text-accent-amber">CODE OF CONDUCT</span>
+            <div className="mt-4 card-text">
               {/* Per project brief: HackJam is an MLH Hack Day, not a Member Event. */}
               HackJam is an MLH Hack Day. All hackers agree to the{" "}
               <a
@@ -87,15 +88,15 @@ export default async function GuidePage() {
         </div>
 
         <div className="flex flex-col gap-6">
-          <PixelCard borderColor="var(--color-accent-purple)" className="flex-1 p-7 lg:p-8">
-            <span className="font-pixel text-[10px] tracking-wide text-accent-purple-light">WIFI</span>
-            <div className="mt-4 whitespace-pre-line text-[15px] leading-[1.8]">{event.wifiInfo ?? <Tba />}</div>
+          <PixelCard borderColor="var(--color-accent-purple)" className="flex-1 card-pad">
+            <span className="card-title text-accent-purple-light">WIFI</span>
+            <div className="mt-4 whitespace-pre-line card-text">{event.wifiInfo ?? <Tba />}</div>
           </PixelCard>
 
           {event.whatToBring.length > 0 && (
-            <PixelCard borderColor="var(--color-accent-magenta)" className="flex-1 p-7 lg:p-8">
-              <span className="font-pixel text-[10px] tracking-wide text-accent-pink-light">WHAT TO BRING</span>
-              <ul className="mt-4 list-disc pl-5 text-[15px] leading-[1.9] marker:text-accent-pink-light">
+            <PixelCard borderColor="var(--color-accent-magenta)" className="flex-1 card-pad">
+              <span className="card-title text-accent-pink-light">WHAT TO BRING</span>
+              <ul className="mt-4 list-disc pl-5 card-text leading-[1.9] marker:text-accent-pink-light">
                 {event.whatToBring.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
@@ -104,7 +105,52 @@ export default async function GuidePage() {
           )}
         </div>
       </div>
+
+      <NeedHelp discordUrl={event.discordUrl} contactEmail={event.contactEmail} />
     </div>
+  );
+}
+
+/**
+ * Replaces the old in-app help form (cut for time). Questions go to Discord;
+ * anything private — a Code of Conduct concern — goes by email, since a
+ * public channel is no place for that. id="help" so /help can land here.
+ */
+function NeedHelp({ discordUrl, contactEmail }: { discordUrl: string | null; contactEmail: string | null }) {
+  return (
+    <section id="help" aria-label="Need help?" className="scroll-mt-8">
+      <PixelCard borderColor="var(--color-accent-pink)" className="card-pad">
+        <span className="card-title text-accent-pink">NEED HELP?</span>
+        <div className="mt-5 grid grid-cols-1 gap-8 md:grid-cols-2 md:gap-10">
+          <div className="flex flex-col gap-3">
+            <span className="card-label text-text-muted">QUESTIONS</span>
+            <p className="card-text text-text-secondary">
+              Stuck, lost, or need an organizer during the event? Ask in Discord. Organizers and other hackers are there.
+            </p>
+            {discordUrl ? (
+              <a
+                href={discordUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="pixel-btn-solid mt-1 inline-flex self-start px-[22px] py-[12px] font-body text-[12px] font-bold tracking-wide text-surface-bg"
+              >
+                ASK IN DISCORD &rarr;
+              </a>
+            ) : (
+              <span className="card-text text-text-dim">Discord link coming soon.</span>
+            )}
+          </div>
+          <div className="flex flex-col gap-3 md:border-l md:border-text-primary/8 md:pl-10">
+            <span className="card-label text-text-muted">PRIVATE CONCERNS</span>
+            <p className="card-text text-text-secondary">
+              For anything you&apos;d rather not post publicly, like a Code of Conduct concern, email the organizers
+              directly.
+            </p>
+            {contactEmail ? <CopyEmail email={contactEmail} /> : <span className="card-text text-text-dim">Email coming soon.</span>}
+          </div>
+        </div>
+      </PixelCard>
+    </section>
   );
 }
 
@@ -112,7 +158,7 @@ export default async function GuidePage() {
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1 border-b border-text-primary/7 py-5 first:pt-0 last:border-b-0 last:pb-0 sm:flex-row sm:gap-6">
-      <dt className="shrink-0 pt-1 font-pixel text-[9px] tracking-widest text-text-muted sm:w-[150px]">{label}</dt>
+      <dt className="shrink-0 pt-1 card-label text-text-muted sm:w-[150px]">{label}</dt>
       <dd className="flex min-w-0 flex-col gap-0.5">{children}</dd>
     </div>
   );
@@ -120,10 +166,10 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 function FullGuideLink({ url }: { url: string }) {
   return (
-    <PixelCard borderColor="var(--color-accent-pink)" className="flex flex-col gap-4 p-7 lg:p-8 sm:flex-row sm:items-center sm:justify-between">
+    <PixelCard borderColor="var(--color-accent-pink)" className="flex flex-col gap-4 card-pad sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <span className="font-pixel text-[10px] tracking-wide text-accent-pink">FULL HACKER GUIDE</span>
-        <p className="mt-2.5 max-w-[460px] text-[15px] leading-[1.8] text-text-secondary">
+        <span className="card-title text-accent-pink">FULL HACKER GUIDE</span>
+        <p className="mt-2.5 max-w-[460px] card-text text-text-secondary">
           Everything beyond the essentials below, in one document.
         </p>
       </div>
@@ -142,14 +188,14 @@ function FullGuideLink({ url }: { url: string }) {
 /** Shown until an organizer adds the guide link at /admin/event. */
 function FullGuideInProgress() {
   return (
-    <PixelCard borderColor="var(--color-accent-amber)" className="p-7 lg:p-8">
+    <PixelCard borderColor="var(--color-accent-amber)" className="card-pad">
       <div className="flex flex-wrap items-center gap-3">
-        <span className="font-pixel text-[10px] tracking-wide text-accent-amber">FULL HACKER GUIDE</span>
+        <span className="card-title text-accent-amber">FULL HACKER GUIDE</span>
         <span className="border border-accent-amber/60 px-2 py-1 font-pixel text-[7px] tracking-widest text-accent-amber">
           IN PROGRESS
         </span>
       </div>
-      <p className="mt-3 max-w-[560px] text-[15px] leading-[1.8] text-text-secondary">
+      <p className="mt-3 max-w-[560px] card-text text-text-secondary">
         We&apos;re still putting the full guide together. It&apos;ll show up right here once it&apos;s ready. The
         essentials below are up to date.
       </p>

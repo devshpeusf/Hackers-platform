@@ -23,9 +23,9 @@ export default function Team({ fullName }: { fullName: string }) {
       <PageHeading title="TEAM" />
 
       {!hasTeam ? (
-        <PixelCard className="max-w-[560px] p-9 text-center">
-          <div className="mb-2.5 text-sm font-bold">You haven&apos;t joined a team yet.</div>
-          <div className="mb-6.5 text-xs leading-[1.7] text-text-muted">{team.noTeamCopy}</div>
+        <PixelCard className="max-w-[640px] p-10 text-center">
+          <div className="mb-2.5 card-value">You haven&apos;t joined a team yet.</div>
+          <div className="mb-7 card-text text-text-muted">{team.noTeamCopy}</div>
           <div className="flex justify-center gap-3.5">
             <PixelButton className="px-[22px] py-3 text-[11px]" onClick={() => setHasTeam(true)}>
               CREATE A TEAM
@@ -36,15 +36,15 @@ export default function Team({ fullName }: { fullName: string }) {
           </div>
         </PixelCard>
       ) : (
-        <PixelCard borderColor="var(--color-accent-purple)" className="max-w-[560px] p-8">
-          <span className="font-pixel text-[9px] tracking-widest text-accent-purple-light">// YOUR TEAM</span>
-          <div className="mt-3.5 mb-5 text-lg font-bold">{team.name}</div>
+        <PixelCard borderColor="var(--color-accent-purple)" className="max-w-[640px] card-pad">
+          <span className="card-title text-accent-purple-light">// YOUR TEAM</span>
+          <div className="mt-3.5 mb-5 text-xl font-bold">{team.name}</div>
           <div className="flex items-center gap-3 border-t border-text-primary/8 py-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center bg-border-default text-xs font-bold">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center bg-border-default card-meta font-bold">
               {initials}
             </div>
-            <div className="text-[13px]">
-              {fullName} <span className="text-xs text-text-dim">(you)</span>
+            <div className="card-text">
+              {fullName} <span className="card-meta text-text-dim">(you)</span>
             </div>
           </div>
           <div className="mt-5 flex items-center justify-between border-t border-text-primary/8 pt-5">

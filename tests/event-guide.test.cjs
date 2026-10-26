@@ -35,7 +35,7 @@ test("empty fields save as empty, so the guide shows TBA", () => {
   assert.equal(result.ok, true);
   assert.deepEqual(plain(result.data), {
     parkingInfo: null, wifiInfo: null, whatToBring: [], codeOfConductUrl: null,
-    hackerGuideUrl: null,
+    hackerGuideUrl: null, discordUrl: null, contactEmail: null,
   });
 });
 
@@ -215,4 +215,47 @@ test("the guide renders one row per location, and parking says 'To be announced'
   const page = readFileSync("src/app/(app)/guide/page.tsx", "utf8");
   assert.match(page, /parseLocations\(event\.locations\)/);
   assert.match(page, /To be announced/);
+});
+
+// ---- help: Discord + email instead of an in-app form ----
+
+test("the Discord link must be https and the email must look like one", () => {
+  const ok = guide.parseGuideForm(form({ discordUrl: "https://discord.gg/N9bjk9hmE", contactEmail: "hackabull.dev@gmail.com" }));
+  assert.equal(ok.ok, true);
+  assert.equal(ok.data.discordUrl, "https://discord.gg/N9bjk9hmE");
+  assert.equal(ok.data.contactEmail, "hackabull.dev@gmail.com");
+
+  for (const bad of ["http://discord.gg/x", "discord.gg/x", "javascript:alert(1)"]) {
+    assert.ok(guide.parseGuideForm(form({ discordUrl: bad })).errors?.discordUrl, bad);
+  }
+  for (const bad of ["hackabull.dev", "a@b", "two words@x.com", "x@y.com" + "z".repeat(120)]) {
+    assert.ok(guide.parseGuideForm(form({ contactEmail: bad })).errors?.contactEmail, bad);
+  }
+});
+
+test("the guide shows a Need help box with Discord and a private email channel", () => {
+  const page = readFileSync("src/app/(app)/guide/page.tsx", "utf8");
+  assert.match(page, /<NeedHelp discordUrl=\{event\.discordUrl\} contactEmail=\{event\.contactEmail\} \/>/);
+  assert.match(page, /id="help"/);
+  assert.match(page, /Code of Conduct concern/);
+});
+
+test("/help is gone: no nav item, and the old URL redirects to the box after the access check", () => {
+  assert.doesNotMatch(readFileSync("src/lib/placeholder-data.ts", "utf8"), /href: "\/help"/);
+  const help = readFileSync("src/app/(app)/help/page.tsx", "utf8");
+  assert.match(help, /await getCurrentHacker\(\);\s*redirect\("\/guide#help"\)/);
+  assert.doesNotMatch(help, /<form|Field/);
+});
+
+test("no page still links to /help or to nowhere", () => {
+  const { execSync } = require("node:child_process");
+  const hits = execSync("grep -rn -e 'href=\"/help\"' -e 'href=\"#\"' src || true", { encoding: "utf8" }).trim();
+  assert.equal(hits, "");
+});
+
+test("the dashboard contact box uses the event's real contacts, not placeholders", () => {
+  const dashboard = readFileSync("src/app/(app)/dashboard/Dashboard.tsx", "utf8");
+  assert.doesNotMatch(dashboard, /contactLog/);
+  assert.match(dashboard, /event\.discordUrl && \{/);
+  assert.match(dashboard, /event\.contactEmail && \{/);
 });

@@ -39,17 +39,17 @@ export default function StatusCard({
   const confirmed = status === "ACCEPTED" && rsvpStatus === "CONFIRMED";
 
   return (
-    <PixelCard borderColor={content.color} className={className ?? "p-6.5"}>
-      <span className="font-pixel text-[9px] tracking-widest" style={{ color: content.color }}>
+    <PixelCard borderColor={content.color} className={className ?? "card-pad"}>
+      <span className="card-title" style={{ color: content.color }}>
         // STATUS
       </span>
       <div
-        className="my-3.5 text-base font-bold [text-shadow:0_0_14px_var(--glow)]"
+        className="my-3.5 card-value [text-shadow:0_0_14px_var(--glow)]"
         style={{ color: content.color, "--glow": `color-mix(in srgb, ${content.color} 40%, transparent)` } as CSSProperties}
       >
         {content.headline}
       </div>
-      <p className="text-[13px] leading-[1.8] text-text-secondary">{content.body}</p>
+      <p className="card-text text-text-secondary">{content.body}</p>
 
       {content.action && (
         <Link
@@ -67,8 +67,8 @@ export default function StatusCard({
       {/* The payoff for confirming: the one moment worth marking. */}
       {confirmed && dates && (
         <div className="mt-5 border border-text-primary/8 border-l-[3px] border-l-accent-teal bg-accent-teal/5 px-4 py-3.5">
-          <div className="font-pixel text-[9px] tracking-widest text-accent-teal">SEE YOU THERE</div>
-          <div className="mt-2 text-[13px] font-bold text-text-primary">
+          <div className="card-label text-accent-teal">SEE YOU THERE</div>
+          <div className="mt-2 card-text font-bold text-text-primary">
             {event!.name} · {dates}
           </div>
         </div>

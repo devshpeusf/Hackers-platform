@@ -29,7 +29,8 @@ function formatDate(d: Date) {
 }
 
 /** "2027-05" -> "May 2027". Falls back to the raw value if it's an older row. */
-function formatGraduation(v: string) {
+function formatGraduation(v: string | null) {
+  if (!v) return null;
   const m = /^(\d{4})-(\d{2})$/.exec(v);
   if (!m) return v;
   const date = new Date(Number(m[1]), Number(m[2]) - 1);
@@ -90,7 +91,7 @@ export default async function ApplicationStatusPage() {
           status={application.status}
           rsvpStatus={application.rsvpStatus}
           event={application.event}
-          className="mb-6 p-6"
+          className="mb-6 card-pad"
         />
 
         {/* MLH registration — the one thing still outstanding */}
@@ -123,7 +124,7 @@ export default async function ApplicationStatusPage() {
           <Divider />
 
           <Section number="02" title="ABOUT YOU">
-            <Row label="Date of Birth" value={formatDate(application.dateOfBirth)} />
+            <Row label="Date of Birth" value={application.dateOfBirth ? formatDate(application.dateOfBirth) : null} />
             <Row label="Country" value={application.country} />
             <Row label="Level of Study" value={application.levelOfStudy} />
             <Row label="Gender" value={application.gender} optional />
@@ -152,8 +153,17 @@ export default async function ApplicationStatusPage() {
         </PixelCard>
 
         <p className="mt-5 text-[11px] leading-[1.7] text-text-faintest">
+          {/* Straight to Discord, not /help: the portal (and the old help page)
+              is accepted-only, so most people reading this couldn't open it. */}
           Need to change something? Message an organiser in{" "}
-          <Link href="/help">Discord</Link> — we can update it for you.
+          {application.event.discordUrl ? (
+            <a href={application.event.discordUrl} target="_blank" rel="noopener noreferrer">
+              Discord
+            </a>
+          ) : (
+            "Discord"
+          )}{" "}
+          — we can update it for you.
         </p>
       </div>
     </div>

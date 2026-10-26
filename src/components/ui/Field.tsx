@@ -16,6 +16,11 @@ type FieldProps = {
   multiline?: boolean;
   /** Optional trailing icon, e.g. the chevron on the Help page's category field. */
   rightIcon?: ReactNode;
+  /**
+   * "lg" uses the portal's larger type scale (see .card-text in globals.css).
+   * Default "md" keeps the original size for /apply and /admin.
+   */
+  size?: "md" | "lg";
   className?: string;
 };
 
@@ -39,18 +44,21 @@ export default function Field({
   tone = "primary",
   multiline = false,
   rightIcon,
+  size = "md",
   className,
 }: FieldProps) {
+  const large = size === "lg";
   const boxClasses = clsx(
-    "field w-full break-words px-[14px] py-3 text-[13px]",
-    multiline ? "h-24 overflow-y-auto" : "flex items-center justify-between",
+    "field w-full break-words",
+    large ? "px-4 py-3.5 card-text" : "px-[14px] py-3 text-[13px]",
+    multiline ? (large ? "h-32 overflow-y-auto" : "h-24 overflow-y-auto") : "flex items-center justify-between",
     value ? toneClass[tone] : "text-text-dim",
   );
 
   return (
     <div className={className}>
       {label && (
-        <div className="mb-2 text-xs text-text-primary">
+        <div className={clsx("mb-2 text-text-primary", large ? "card-meta" : "text-xs")}>
           {label}
           {optional && <span className="ml-1.5 italic text-text-dim">Optional</span>}
         </div>

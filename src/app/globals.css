@@ -228,4 +228,52 @@ body {
     background: rgb(7 6 13 / 60%);
     border: 1px solid rgb(244 241 251 / 14%);
   }
+
+  /*
+   * Portal type and spacing scale. One step up from the original mockup's
+   * sizes (8px titles, 13px body), which left wide screens mostly empty —
+   * agreed on the hacker guide first, then applied across the portal. Use
+   * these names instead of per-page pixel values so the pages stay in step
+   * and a future change happens here once.
+   *
+   * Colour stays per instance (a text-accent-* utility next to the class).
+   */
+  .card-pad {
+    padding: 1.75rem;
+  }
+  @media (min-width: 64rem) {
+    .card-pad {
+      padding: 2rem;
+    }
+  }
+  /* "VENUE & PARKING", "// STATUS" — the pixel-font label at the top of a card. */
+  .card-title {
+    font-family: var(--font-pixel);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    line-height: 1.6;
+  }
+  /* Pixel-font labels inside a card: row labels, small tags. */
+  .card-label {
+    font-family: var(--font-pixel);
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    line-height: 1.6;
+  }
+  /* The main readable text in a card. */
+  .card-text {
+    font-size: 15px;
+    line-height: 1.8;
+  }
+  /* Secondary text: notes, hints, captions. */
+  .card-meta {
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  /* A card's key value: a place name, a team name, a meal preference. */
+  .card-value {
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.5;
+  }
 }

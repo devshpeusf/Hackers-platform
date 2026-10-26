@@ -20,7 +20,7 @@ export default function RsvpButtons({ eventLabel }: { eventLabel?: string }) {
   // away; this covers the moment in between.
   if (state.status === "CONFIRMED" || state.status === "DECLINED") {
     return (
-      <p role="status" className="mt-5 text-[12px] leading-[1.7] text-text-muted">
+      <p role="status" className="mt-5 card-meta text-text-muted">
         {state.status === "CONFIRMED" ? "You're confirmed. See you there!" : "You've declined."}
       </p>
     );
@@ -33,8 +33,8 @@ export default function RsvpButtons({ eventLabel }: { eventLabel?: string }) {
     >
       {confirmingDecline ? (
         <>
-          <div className="font-pixel text-[9px] tracking-widest text-text-muted">CAN&apos;T MAKE IT?</div>
-          <p className="mt-2.5 text-[12px] leading-[1.7] text-text-secondary">
+          <div className="card-label text-text-muted">CAN&apos;T MAKE IT?</div>
+          <p className="mt-2.5 card-meta text-text-secondary">
             No worries. Declining frees your spot for someone on the waitlist. It can&apos;t be undone, and
             you&apos;ll lose access to the hacker portal.
           </p>
@@ -60,8 +60,8 @@ export default function RsvpButtons({ eventLabel }: { eventLabel?: string }) {
         </>
       ) : (
         <>
-          <div className="font-pixel text-[9px] tracking-widest text-accent-pink">WILL YOU BE THERE?</div>
-          {eventLabel && <div className="mt-2 text-[12px] text-text-secondary">{eventLabel}</div>}
+          <div className="card-label text-accent-pink">WILL YOU BE THERE?</div>
+          {eventLabel && <div className="mt-2 card-meta text-text-secondary">{eventLabel}</div>}
           <div className="mt-4 flex flex-wrap gap-3">
             <button
               type="submit"
@@ -81,7 +81,7 @@ export default function RsvpButtons({ eventLabel }: { eventLabel?: string }) {
               &#10005; CAN&apos;T MAKE IT
             </button>
           </div>
-          <p className="mt-3.5 text-[10px] leading-[1.6] text-text-faintest">
+          <p className="mt-3.5 text-[12px] leading-[1.6] text-text-faintest">
             RSVP closes when the event starts. Confirm early so we can plan food and swag.
           </p>
         </>
@@ -90,7 +90,7 @@ export default function RsvpButtons({ eventLabel }: { eventLabel?: string }) {
       <p
         role={state.status === "ERROR" || state.status === "UNAVAILABLE" ? "alert" : "status"}
         aria-live="polite"
-        className="mt-3 text-[11px] leading-[1.7] text-text-muted empty:hidden"
+        className="mt-3 card-meta text-text-muted empty:hidden"
       >
         {pending
           ? "Saving…"

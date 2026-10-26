@@ -20,22 +20,22 @@ export default async function SchedulePage() {
       {rows.length === 0 ? (
         <ScheduleInProgress />
       ) : (
-        <TerminalWindow filename="RUN-OF-SHOW.LOG" className="max-w-[700px]">
-          <ol className="px-6 pt-2.5 pb-5.5">
+        <TerminalWindow filename="RUN-OF-SHOW.LOG" className="max-w-[900px]">
+          <ol className="px-7 pt-3 pb-6 lg:px-8">
             {rows.map((row, i) => (
               <li
                 key={`${i}-${row.time}`}
-                className={"flex items-baseline gap-4.5 py-3" + (i < rows.length - 1 ? " border-b border-text-primary/7" : "")}
+                className={"flex items-baseline gap-6 py-4" + (i < rows.length - 1 ? " border-b border-text-primary/7" : "")}
               >
                 <span
                   className={
-                    "w-[88px] shrink-0 font-pixel text-[9px] leading-[1.6] " +
+                    "w-[110px] shrink-0 card-label " +
                     (row.highlighted ? "text-accent-teal" : "text-text-dim")
                   }
                 >
                   {row.time}
                 </span>
-                <span className={"min-w-0 break-words text-[13px] " + (row.highlighted ? "font-bold text-text-primary" : "text-text-secondary")}>
+                <span className={"min-w-0 break-words card-text " + (row.highlighted ? "font-bold text-text-primary" : "text-text-secondary")}>
                   {row.label}
                 </span>
               </li>
@@ -44,7 +44,7 @@ export default async function SchedulePage() {
         </TerminalWindow>
       )}
 
-      <p className="mt-5 max-w-[700px] text-[11px] leading-[1.7] text-text-faintest">
+      <p className="mt-5 max-w-[900px] card-meta text-text-faintest">
         Times can shift on the day. Live changes are announced in Discord.
       </p>
     </div>
@@ -54,14 +54,14 @@ export default async function SchedulePage() {
 /** Shown until an organizer adds the run of show at /admin/event. */
 function ScheduleInProgress() {
   return (
-    <PixelCard borderColor="var(--color-accent-amber)" className="max-w-[700px] p-6">
+    <PixelCard borderColor="var(--color-accent-amber)" className="max-w-[900px] card-pad">
       <div className="flex flex-wrap items-center gap-3">
-        <span className="font-pixel text-[8px] tracking-wide text-accent-amber">RUN OF SHOW</span>
+        <span className="card-title text-accent-amber">RUN OF SHOW</span>
         <span className="border border-accent-amber/60 px-2 py-1 font-pixel text-[7px] tracking-widest text-accent-amber">
           IN PROGRESS
         </span>
       </div>
-      <p className="mt-3 max-w-[560px] text-[13px] leading-[1.8] text-text-secondary">
+      <p className="mt-3 max-w-[620px] card-text text-text-secondary">
         We&apos;re still finalizing the schedule. It&apos;ll show up right here once it&apos;s ready.
       </p>
       <div aria-hidden="true" className="mt-4 flex items-center gap-1">

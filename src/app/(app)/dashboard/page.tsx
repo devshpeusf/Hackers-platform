@@ -10,15 +10,15 @@ export default async function DashboardPage() {
   const badgeSvg = await getBadgeSvg(application.id);
   // Just what the dashboard shows (name, dates, main venue), not the whole
   // event row.
-  const { name, startDate, endDate, locations } = application.event;
-  const event = { name, startDate, endDate, venueName: mainVenue(parseLocations(locations)) };
+  const { name, startDate, endDate, locations, discordUrl, contactEmail } = application.event;
+  const event = { name, startDate, endDate, venueName: mainVenue(parseLocations(locations)), discordUrl, contactEmail };
   return (
     <Dashboard
       fullName={fullName}
       status={application.status}
       rsvpStatus={application.rsvpStatus}
       event={event}
-      diet={application.diet}
+      diet={application.diet ?? "Not provided"}
       badgeSvg={badgeSvg}
     />
   );

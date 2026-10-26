@@ -19,7 +19,6 @@ export const navItems: NavItem[] = [
   { id: "team", label: "TEAM", href: "/team" },
   { id: "guide", label: "GUIDE", href: "/guide" },
   { id: "schedule", label: "SCHEDULE", href: "/schedule" },
-  { id: "help", label: "HELP", href: "/help" },
 ];
 
 export const dashboardStatus = {
@@ -28,10 +27,7 @@ export const dashboardStatus = {
   // shows the hacker's real status now (src/components/StatusCard.tsx).
 };
 
-export const contactLog = [
-  { command: "discord --join", target: "#hackjam-general", action: "JOIN" },
-  { command: "mail --to", target: "hackjam@shpeusf.org", action: "SEND" },
-];
+// contactLog moved to the Event row (discordUrl, contactEmail) — edit at /admin/event.
 
 export const team = {
   noTeamCopy: "Teams of 1–3 hackers. Solo hacking is welcome too.",
