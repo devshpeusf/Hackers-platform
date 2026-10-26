@@ -7,10 +7,10 @@
     "@prisma/engines": true
   },
   "scripts": {
-    "dev": "prisma generate && next dev",
-    "build": "prisma generate && next build",
+    "dev": "node scripts/prepare-scanner-decoder.mjs && prisma generate && next dev",
+    "build": "node scripts/prepare-scanner-decoder.mjs && prisma generate && next build",
     "start": "next start",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate && node scripts/prepare-scanner-decoder.mjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.0",
@@ -19,6 +19,7 @@
     "@react-email/render": "2.1.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.116.0",
+    "barcode-detector": "3.2.3",
     "next": "16.3.4",
     "pg": "8.23.0",
     "qrcode": "^1.5.4",

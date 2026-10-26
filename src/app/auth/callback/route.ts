@@ -1,10 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getSiteOrigin } from "@/lib/site-url";
+import { authReturnPath } from "@/lib/auth-return";
 
 /**
  * Where Discord sends the applicant back. Trades the one-time code for a
- * session, which the client writes as cookies, then drops them into the form.
+ * session, which the client writes as cookies, then uses a known return path.
  *
  * This URL must be registered as a redirect in BOTH the Discord application
  * and the Supabase dashboard, for every origin used (localhost and the
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const origin = getSiteOrigin(request);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/apply/form";
+  const next = authReturnPath(searchParams.get("next"));
 
   // Discord sends the user back here with ?error= if they hit Cancel.
   const denied = searchParams.get("error");

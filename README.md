@@ -118,6 +118,98 @@ Before deploying this lifecycle to an existing database, count ACCEPTED rows
 with null badgeToken in a read-only query. Any missing credentials require a
 separately approved backfill; dashboard visits do not repair them.
 
+## Scanner authorization and lookup (PLAT-52 Phase 2)
+
+`/scanner` is a staff-only page, outside the hacker portal. Discord
+sign-in returns scanner staff to `/scanner`; ordinary applicant sign-in still
+lands at `/apply/form`. OAuth return paths are limited to those two destinations.
+
+`POST /api/scanner/lookup` independently verifies the session and the current
+Person role on every request. Only VOLUNTEER and ORGANIZER can use it; no hacker
+application is required for staff access. Send same-origin JSON `{ "token": "..." }`
+with no extra fields. The body is limited to 1024 bytes and tokens must be exactly
+43 base64url characters. The token belongs only in the POST body, never a URL.
+
+Lookup scope is the latest event by start date, matching `/admin`; that policy
+lives in `src/lib/scanner-event.ts`. Eligible badges are ACCEPTED with PENDING
+or CONFIRMED RSVP. Success returns exactly `{ "name": "First Last" }`. Unknown,
+older-event and ineligible badges all return 404 with `BADGE_NOT_FOUND`. Invalid
+input uses the same generic message with 400 (format/JSON), 413 (body limit), or
+415 (content type). Auth failures use 401/403; internal failures use a sanitized
+503. All lookup responses are private and no-store.
+
+Lookup only reads existing data: no scan records or schema changes. Scanner and
+OAuth tests use mocked Auth/Prisma:
+`node --test tests/scanner.test.cjs tests/auth-return.test.cjs`.
+
+## Camera scanning (PLAT-52 Phase 3)
+
+Press START CAMERA to request video only, preferring the rear camera. Native
+BarcodeDetector is used only when it advertises QR support; otherwise the lazy
+`barcode-detector@3.2.3` ponyfill uses the same camera and decode loop. Native
+initialization/detection failures also switch to the fallback. The WASM reader
+is served from our own `/scanner-assets/` directory, never a runtime CDN.
+Dev/build/postinstall prepare the exact dependency's binary and verify its
+upstream SHA-256. Source/version/license details are in
+`public/scanner-assets/README.md`; no additional manual asset download is needed.
+
+Scanning runs at up to five attempts per second, with no overlapping decodes.
+Each result pauses scanning. SCAN NEXT waits one second before rearming, then
+suppresses the immediately previous badge until a different badge is shown or
+the previous one has been absent for 600 ms. Network failures offer TRY AGAIN;
+invalid badges share the generic BADGE NOT FOUND message. Only the attendee's
+name is shown on success. Tokens exist only in transient session memory and
+the lookup POST body; camera frames stay on-device.
+
+STOP CAMERA, leaving the page, or hiding the tab stops every stream track,
+cancels timers/lookup, and discards stale async results. Returning to the page
+requires START CAMERA again. Camera denial, missing/busy devices and decoder
+load failures provide explicit retry controls without automatic permission loops.
+
+Real-phone testing requires HTTPS. Desktop localhost is a secure development
+context; opening `http://192.168.x.x:3000` from a phone generally is not. Use an
+HTTPS development endpoint/certificate and test both iOS Safari and Android
+Chrome. No insecure-browser bypass, service worker, offline cache, scan history,
+or check-in write is included.
+
+`node --test tests/*.test.cjs` includes deterministic camera/timing tests, actual
+rounded-badge decoding through the WASM reader, and a local headless Edge video
+test when Edge and Node's WebSocket API are available (otherwise it is skipped).
+Browser tests use generated video and a fake lookup server, never a physical
+camera or shared applicant data. Real iOS/Android camera testing is still required.
+
+## Scanner installation (PLAT-52 Phase 4)
+
+Open the deployed HTTPS `/scanner` link, sign in, and use the browser's native
+Add to Home Screen / Install app menu. The page includes collapsed instructions
+for iPhone and Android. Installation guidance hides in standalone display mode.
+The scanner manifest, Apple metadata and title are scoped to `/scanner`; the
+hacker portal keeps its existing metadata and launch behavior. The installed
+app launches `/scanner`, even if a fresh sign-in is needed first.
+
+`public/scanner.webmanifest` specifies a stable `/scanner` ID, start URL and scope,
+standalone display, 192/512 normal and maskable icons, and the existing dark theme.
+The icons derive from the approved HackJam mascot; regenerate them with
+`node scripts/generate-scanner-icons.mjs`. Commit the PNGs and their source script.
+The manifest/icons and generated decoder are public static assets; staff page and
+lookup authorization remain independent. No service worker or offline data is used.
+
+After `npm run build`, opt into built-server checks in PowerShell:
+`$env:SCANNER_RUNTIME_TEST='1'; node --test tests/scanner-runtime.test.cjs`.
+This tests static asset delivery, actual Next.js scanner metadata, anonymous page
+and lookup denial, and the OAuth/PKCE return destination without contacting Discord
+or exchanging a real session. Runtime checks use dummy database connection URLs.
+
+Real-phone QA (use existing authorized badges; do not edit applicant records):
+
+- iPhone Safari: sign in as staff, allow camera, verify a real dashboard QR/name
+  and an unrelated QR/error; add to Home Screen, launch, and repeat sign-in/camera.
+- Android Chrome: repeat access/scanning and native/fallback checks, install from
+  the browser menu, verify standalone launch at `/scanner`, then stop/background
+  the app and confirm the camera indicator turns off.
+- Confirm an applicant is denied. Disconnect the network and confirm scanning
+  reports unable to verify; reconnect and retry. No badge is accepted offline.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getSiteOrigin } from "@/lib/site-url";
+import { authReturnPath } from "@/lib/auth-return";
 
 /**
  * Starts Discord OAuth.
@@ -16,11 +17,15 @@ import { getSiteOrigin } from "@/lib/site-url";
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
   const origin = getSiteOrigin(request);
+  const next = authReturnPath(new URL(request.url).searchParams.get("next"));
+  const callback = new URL("/auth/callback", origin);
+  // Preserve the existing applicant callback URL and PKCE exchange.
+  if (next === "/scanner") callback.searchParams.set("next", next);
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "discord",
     options: {
-      redirectTo: `${origin}/auth/callback`,
+      redirectTo: callback.toString(),
       // Matches what Knight Hacks request: enough to identify the applicant
       // and add them to the server later. Discord does NOT return a usable
       // email even with the email scope, which is why the form asks for one.

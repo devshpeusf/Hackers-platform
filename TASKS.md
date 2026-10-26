@@ -122,9 +122,11 @@ submit.
 
 - [x] Generated badge QR on the dashboard — random opaque token per admitted
       hacker, own badge only (`src/lib/badge.ts`)
-- [ ] Organizer-side scanner — not designed. It should mark a badge used once
-      and check the hacker's current status at scan time, since a screenshot
-      of a QR can be forwarded and an acceptance can be revoked.
+- [x] Staff scanner `[PLAT-52]` — volunteer-or-above phone camera, native QR
+      detection with a same-origin fallback, and home-screen installation at
+      `/scanner`. Online lookup rechecks latest-event admission/RSVP eligibility
+      and returns name only. No attendance writes, scan history, offline data,
+      or single-use badge consumption; those are separate follow-up work.
 
 ## Phase 6 — Organizer dashboard + sponsor portal
 
