@@ -37,6 +37,11 @@ model Person {
   firstName String
   lastName  String
   email     String @unique
+
+  /// The @handle, shown to teammates on /team. Saved when they create or join
+  /// a team (it comes from the Discord login, which only knows the person
+  /// currently signed in). Display only — never used for access.
+  discordUsername String?
   /// Required — MLH's baseline collection includes phone number. Deliberately
   /// NOT unique though: two applicants can legitimately share a number.
   phoneNum  String
@@ -101,6 +106,9 @@ model Event {
 
   // One event can have many applications
   applications Application[]
+
+  // Teams are per event, so next year's start empty.
+  teams Team[]
 }
 
 // Resume is its own model for reusability
@@ -122,6 +130,12 @@ model Application {
   // Connects application to a person
   personId String
   person   Person @relation("Applicant", fields: [personId], references: [id])
+
+  /// The hacker's team for this event, if any (/team). Hangs off the
+  /// application, not the person, so it's one team per hacker per event.
+  /// Cleared automatically if the team is deleted.
+  teamId String?
+  team   Team?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
 
   // Connects application to an event
   eventId String
@@ -229,6 +243,8 @@ model Application {
 
   // Every person can only submit one application to each event
   @@unique([personId, eventId])
+  // Listing and counting a team's members.
+  @@index([teamId])
 }
 
 /// Public RSVP credentials. Only hashes are stored; raw tokens exist in the
@@ -312,6 +328,27 @@ enum PersonRole {
 }
 
 // Possible application statuses
+/// A hacker team (/team): one row per team. Members are the applications
+/// whose teamId points here. Max 3 members, enforced in src/lib/teams.ts.
+/// Informational only — official team registration happens on Devpost.
+model Team {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  /// Any member can rename it.
+  name String
+
+  /// What teammates share to join. Random, unique, no lookalike characters.
+  inviteCode String @unique
+
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id])
+
+  members Application[]
+
+  @@index([eventId])
+}
+
 enum ApplicationStatus {
   SUBMITTED
   ACCEPTED

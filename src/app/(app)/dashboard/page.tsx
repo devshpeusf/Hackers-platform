@@ -1,5 +1,6 @@
 import { getCurrentHacker } from "@/lib/current-hacker";
 import { getBadgeSvg } from "@/lib/badge";
+import { getTeamView } from "@/lib/teams";
 import { mainVenue, parseLocations } from "@/lib/event-guide";
 import Dashboard from "./Dashboard";
 
@@ -20,6 +21,7 @@ export default async function DashboardPage() {
       event={event}
       diet={application.diet ?? "Not provided"}
       badgeSvg={badgeSvg}
+      teamName={(await getTeamView(application.id))?.name ?? null}
     />
   );
 }

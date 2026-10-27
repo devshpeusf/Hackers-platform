@@ -30,9 +30,11 @@ type DashboardProps = {
   diet: string;
   /** The hacker's own check-in QR, rendered server-side (src/lib/badge.ts). */
   badgeSvg: string | null;
+  /** The hacker's team name, or null if they're not on one. */
+  teamName: string | null;
 };
 
-export default function Dashboard({ fullName, status, rsvpStatus, event, diet, badgeSvg }: DashboardProps) {
+export default function Dashboard({ fullName, status, rsvpStatus, event, diet, badgeSvg, teamName }: DashboardProps) {
   // The waiver checklist row is the one interactive bit of static state
   // on this page (mirrors the mockup's toggle) — no persistence.
   const [waiverDone, setWaiverDone] = useState(false);
@@ -138,7 +140,13 @@ export default function Dashboard({ fullName, status, rsvpStatus, event, diet, b
               <PixelCard clickable className="px-6 py-5.5">
                 <span className="card-label text-text-muted">TEAM</span>
                 <div className="mt-3 card-text font-bold">
-                  NOT FORMED · <span className="text-accent-teal">FIND TEAMMATES</span>
+                  {teamName ? (
+                    <span className="break-words text-text-primary">{teamName}</span>
+                  ) : (
+                    <>
+                      NOT FORMED · <span className="text-accent-teal">CREATE OR JOIN</span>
+                    </>
+                  )}
                 </div>
               </PixelCard>
             </Link>
