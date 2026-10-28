@@ -29,11 +29,7 @@ export const dashboardStatus = {
 
 // contactLog moved to the Event row (discordUrl, contactEmail) — edit at /admin/event.
 
-export const team = {
-  noTeamCopy: "Teams of 1–3 hackers. Solo hacking is welcome too.",
-  name: "PIXEL PIONEERS",
-  inviteCode: "HJ26-7F3K",
-};
+// The placeholder team is gone — teams are real now (src/lib/teams.ts).
 
 // guideCards moved to the Event row — see src/lib/event-guide.ts and /admin/event.
 

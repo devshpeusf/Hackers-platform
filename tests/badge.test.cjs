@@ -162,6 +162,8 @@ test("URL/form/query IDs cannot replace the session owner's badge; only SVG cros
       event: { name: "Event", startDate: new Date(), endDate: new Date(), locations: [] },
     } }) },
     "@/lib/badge": s, "@/lib/event-guide": { mainVenue: () => null, parseLocations: () => [] },
+    // Dashboard team tile (tests/teams.test.cjs covers teams).
+    "@/lib/teams": { getTeamView: async () => null },
     "./Dashboard": { __esModule: true, default: (value) => { props = value; return null; } },
   });
   renderToStaticMarkup(await page.default({ params: { id: "other" }, searchParams: { applicationId: "other" }, formData: { id: "other" } }));
