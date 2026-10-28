@@ -33,10 +33,26 @@ model Person {
   /// promotion path. Volunteers have event-day staff access only where
   /// explicitly allowed; organizer-only access still requires ORGANIZER.
   role PersonRole @default(APPLICANT)
+  /// Who last changed this person's role at /admin/roles, and when — the
+  /// audit trail for who handed out staff access. Null for roles set by hand
+  /// in the database before that page existed.
+  roleChangedAt   DateTime?
+  roleChangedById String?
+  roleChangedBy   Person?   @relation("RoleChanger", fields: [roleChangedById], references: [id])
+  /// People whose role this organizer changed.
+  roleChanges     Person[]  @relation("RoleChanger")
+
+  /// Announcements this organizer sent (/admin/email).
+  broadcastsSent Broadcast[]
 
   firstName String
   lastName  String
   email     String @unique
+
+  /// The @handle, shown to teammates on /team. Saved when they create or join
+  /// a team (it comes from the Discord login, which only knows the person
+  /// currently signed in). Display only — never used for access.
+  discordUsername String?
   /// Required — MLH's baseline collection includes phone number. Deliberately
   /// NOT unique though: two applicants can legitimately share a number.
   phoneNum  String
@@ -101,6 +117,12 @@ model Event {
 
   // One event can have many applications
   applications Application[]
+
+  // Teams are per event, so next year's start empty.
+  teams Team[]
+
+  // Announcements sent to this event's hackers (/admin/email).
+  broadcasts Broadcast[]
 }
 
 // Resume is its own model for reusability
@@ -122,6 +144,12 @@ model Application {
   // Connects application to a person
   personId String
   person   Person @relation("Applicant", fields: [personId], references: [id])
+
+  /// The hacker's team for this event, if any (/team). Hangs off the
+  /// application, not the person, so it's one team per hacker per event.
+  /// Cleared automatically if the team is deleted.
+  teamId String?
+  team   Team?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
 
   // Connects application to an event
   eventId String
@@ -224,11 +252,16 @@ model Application {
   // later — see EmailQueue below).
   emailQueue EmailQueue[]
 
+  // Announcements this applicant was sent (/admin/email).
+  broadcastRecipients BroadcastRecipient[]
+
   /// Retries may issue multiple RSVP links, each scoped to this application.
   rsvpTokens RsvpToken[]
 
   // Every person can only submit one application to each event
   @@unique([personId, eventId])
+  // Listing and counting a team's members.
+  @@index([teamId])
 }
 
 /// Public RSVP credentials. Only hashes are stored; raw tokens exist in the
@@ -282,6 +315,65 @@ model EmailQueue {
   @@index([status, createdAt])
 }
 
+/// An announcement an organizer sent to a group of hackers (/admin/email).
+/// Separate from EmailQueue, which allows one email of each type per
+/// applicant — announcements repeat. Sent by the same scheduled job, after
+/// transactional email (confirmations, decisions, RSVP), so on Resend's free
+/// tier an announcement never delays an acceptance.
+model Broadcast {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id])
+
+  audience BroadcastAudience
+  subject  String
+  /// Plain text with a little formatting (**bold**, "- " bullets, links) —
+  /// see src/lib/broadcast-format.ts. Never raw HTML.
+  body     String @db.Text
+
+  sentById String
+  sentBy   Person @relation(fields: [sentById], references: [id])
+
+  /// Who it goes to, fixed when it was sent: one row per recipient.
+  recipients BroadcastRecipient[]
+
+  @@index([eventId, createdAt])
+}
+
+/// One person's copy of an announcement, worked through by the send job with
+/// the same claim / retry / quota rules as EmailQueue.
+model BroadcastRecipient {
+  id        String    @id @default(cuid())
+  createdAt DateTime  @default(now())
+  sentAt    DateTime?
+
+  broadcastId   String
+  broadcast     Broadcast   @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id])
+
+  status    EmailStatus @default(PENDING)
+  attempts  Int         @default(0)
+  lastError String?
+
+  @@unique([broadcastId, applicationId])
+  @@index([status, createdAt])
+}
+
+/// Who an announcement goes to. Resolved on the server at send time — there's
+/// no way to type in arbitrary addresses.
+enum BroadcastAudience {
+  ACCEPTED_ALL
+  ACCEPTED_CONFIRMED
+  ACCEPTED_PENDING_RSVP
+  WAITLISTED
+  ALL_APPLICANTS
+  WALK_INS
+  ON_A_TEAM
+}
+
 enum EmailType {
   CONFIRMATION
   /// Decision emails, queued from /admin/applications/send (PLAT-42).
@@ -316,6 +408,27 @@ enum PersonRole {
 }
 
 // Possible application statuses
+/// A hacker team (/team): one row per team. Members are the applications
+/// whose teamId points here. Max 3 members, enforced in src/lib/teams.ts.
+/// Informational only — official team registration happens on Devpost.
+model Team {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  /// Any member can rename it.
+  name String
+
+  /// What teammates share to join. Random, unique, no lookalike characters.
+  inviteCode String @unique
+
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id])
+
+  members Application[]
+
+  @@index([eventId])
+}
+
 enum ApplicationStatus {
   SUBMITTED
   ACCEPTED

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
+import { sendBroadcastBatch } from "@/lib/broadcast-sender";
 import { issueRsvpToken, resolveRsvpToken } from "@/lib/rsvp";
 import { getRsvpBaseUrl } from "@/lib/site-url";
 import ConfirmationEmail from "@emails/ConfirmationEmail";
@@ -83,7 +84,9 @@ export async function POST(request: NextRequest) {
 
   if (claimed.length === 0) {
     const remaining = await prisma.emailQueue.count({ where: { status: "PENDING" } });
-    return NextResponse.json({ attempted: 0, sent: 0, failed: 0, remaining });
+    // Nothing transactional waiting: the whole batch can go to announcements.
+    const broadcasts = await sendBroadcastBatch(batchSize);
+    return NextResponse.json({ attempted: 0, sent: 0, failed: 0, remaining, broadcasts });
   }
 
   const rows = await prisma.emailQueue.findMany({
@@ -93,6 +96,8 @@ export async function POST(request: NextRequest) {
 
   let sent = 0;
   let failed = 0;
+  // Set when Resend reports its cap: announcements then wait for a later run.
+  let quotaHit = false;
 
   for (const row of rows) {
     try {
@@ -117,6 +122,7 @@ export async function POST(request: NextRequest) {
       else failed++;
     } catch (e) {
       const rateOrQuota = isRateOrQuotaError(e);
+      if (rateOrQuota) quotaHit = true;
       // A renderer/provider exception can echo its payload, including the raw
       // RSVP URL. Neither logs nor lastError may retain that acceptance payload.
       const message = row.emailType === "ACCEPTED"
@@ -161,7 +167,13 @@ export async function POST(request: NextRequest) {
   }
 
   const remaining = await prisma.emailQueue.count({ where: { status: "PENDING" } });
-  return NextResponse.json({ attempted: rows.length, sent, failed, remaining });
+  // Announcements get only what's left of this batch, and nothing at all if
+  // the cap was just hit: on Resend's free tier, transactional email
+  // (confirmations, decisions, RSVP) always goes first.
+  const broadcasts = quotaHit
+    ? await sendBroadcastBatch(0)
+    : await sendBroadcastBatch(batchSize - rows.length);
+  return NextResponse.json({ attempted: rows.length, sent, failed, remaining, broadcasts });
 }
 
 /**

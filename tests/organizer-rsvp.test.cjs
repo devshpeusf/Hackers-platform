@@ -216,6 +216,8 @@ function setup({ applications = [app()], emails = [], organizer = true, signedIn
   const accepted = { __esModule: true, default: (props) => { calls.emailProps.push(props); return jsx.jsx("div", { children: "Accepted" }); } };
   const other = { __esModule: true, default: () => jsx.jsx("div", {}) };
   const worker = load("src/app/api/jobs/send-queued/route.ts", {
+    // Announcements (tests/broadcast.test.cjs covers them): none queued here.
+    "@/lib/broadcast-sender": { sendBroadcastBatch: async () => ({ attempted: 0, sent: 0, failed: 0, remaining: 0, quotaHit: false }) },
     "@/lib/prisma": { prisma }, "@/lib/rsvp": rsvp, "@/lib/site-url": siteUrl,
     "@/lib/email": { sendEmail: async (args) => { calls.sends.push(args); return { id: "mock-delivery" }; } },
     "@emails/AcceptedEmail": accepted, "@emails/ConfirmationEmail": other, "@emails/WaitlistedEmail": other, "@emails/RejectedEmail": other,
