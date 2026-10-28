@@ -33,6 +33,14 @@ model Person {
   /// promotion path. Volunteers have event-day staff access only where
   /// explicitly allowed; organizer-only access still requires ORGANIZER.
   role PersonRole @default(APPLICANT)
+  /// Who last changed this person's role at /admin/roles, and when — the
+  /// audit trail for who handed out staff access. Null for roles set by hand
+  /// in the database before that page existed.
+  roleChangedAt   DateTime?
+  roleChangedById String?
+  roleChangedBy   Person?   @relation("RoleChanger", fields: [roleChangedById], references: [id])
+  /// People whose role this organizer changed.
+  roleChanges     Person[]  @relation("RoleChanger")
 
   firstName String
   lastName  String
