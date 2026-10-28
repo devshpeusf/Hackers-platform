@@ -5,6 +5,7 @@ import ConfirmationEmail from "@emails/ConfirmationEmail";
 import AcceptedEmail from "@emails/AcceptedEmail";
 import WaitlistedEmail from "@emails/WaitlistedEmail";
 import RejectedEmail from "@emails/RejectedEmail";
+import MlhReminderEmail from "@emails/MlhReminderEmail";
 
 /**
  * Renders an email to HTML for viewing in a browser — no Resend call,
@@ -16,12 +17,14 @@ import RejectedEmail from "@emails/RejectedEmail";
  *   http://localhost:3000/api/preview-email?type=accepted
  *   http://localhost:3000/api/preview-email?type=waitlisted
  *   http://localhost:3000/api/preview-email?type=rejected
+ *   http://localhost:3000/api/preview-email?type=mlh-reminder
  */
 const PREVIEWS: Record<string, () => ReactElement> = {
   confirmation: () => <ConfirmationEmail {...ConfirmationEmail.PreviewProps} />,
   accepted: () => <AcceptedEmail {...AcceptedEmail.PreviewProps} />,
   waitlisted: () => <WaitlistedEmail {...WaitlistedEmail.PreviewProps} />,
   rejected: () => <RejectedEmail {...RejectedEmail.PreviewProps} />,
+  "mlh-reminder": () => <MlhReminderEmail {...MlhReminderEmail.PreviewProps} />,
 };
 
 export async function GET(request: NextRequest) {

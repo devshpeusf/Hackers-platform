@@ -284,11 +284,15 @@ model EmailQueue {
 
 enum EmailType {
   CONFIRMATION
-  /// Decision emails. Templates exist (emails/); nothing queues these yet —
-  /// that belongs to the decision-marking work.
+  /// Decision emails, queued from /admin/applications/send (PLAT-42).
   ACCEPTED
   WAITLISTED
   REJECTED
+  /// The week-before nudge to finish MLH registration (PLAT-26). Queued from
+  /// /admin/applications/remind, once per application — MLH registration lives
+  /// in OrganizerHQ and nothing reports back who completed it, so this is a
+  /// single reminder to everyone who's coming, not a follow-up loop.
+  MLH_REMINDER
 }
 
 enum EmailStatus {
