@@ -8,6 +8,7 @@ import ConfirmationEmail from "@emails/ConfirmationEmail";
 import AcceptedEmail from "@emails/AcceptedEmail";
 import WaitlistedEmail from "@emails/WaitlistedEmail";
 import RejectedEmail from "@emails/RejectedEmail";
+import MlhReminderEmail from "@emails/MlhReminderEmail";
 import type { EmailType } from "@/generated/prisma/client";
 
 /**
@@ -25,6 +26,7 @@ const MAX_ATTEMPTS = 3;
 // comfortably under that without needing to catch that error case too.
 const DELAY_BETWEEN_SENDS_MS = 500;
 const STALE_ACCEPTANCE_ERROR = "Acceptance email not sent: the application or RSVP invitation is no longer eligible. Review the decision before retrying.";
+const STALE_REMINDER_ERROR = "MLH reminder not sent: since it was queued this applicant is no longer accepted, declined their RSVP, or was registered at the door. Nothing was emailed.";
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -107,12 +109,17 @@ export async function POST(request: NextRequest) {
         // someone's actually looking at the raw data later.
         // FAILED is also the existing organizer-review state. A stale decision
         // must not be retried automatically or marked SENT; no attempt is used.
-        data: outcome === "STALE_ACCEPTANCE"
-          ? { status: "FAILED", sentAt: null, lastError: STALE_ACCEPTANCE_ERROR }
-          : { status: "SENT", sentAt: new Date(), lastError: null },
+        data: outcome === "SENT"
+          ? { status: "SENT", sentAt: new Date(), lastError: null }
+          : {
+              status: "FAILED",
+              sentAt: null,
+              lastError:
+                outcome === "STALE_ACCEPTANCE" ? STALE_ACCEPTANCE_ERROR : STALE_REMINDER_ERROR,
+            },
       });
-      if (outcome === "STALE_ACCEPTANCE") failed++;
-      else sent++;
+      if (outcome === "SENT") sent++;
+      else failed++;
     } catch (e) {
       const rateOrQuota = isRateOrQuotaError(e);
       if (rateOrQuota) quotaHit = true;
@@ -174,11 +181,24 @@ export async function POST(request: NextRequest) {
  * generic, so a new type is just another case here and another value in the
  * enum, not a second queue or route.
  */
+/**
+ * "November 7" — for reading in a sentence, not a timestamp. Pinned to
+ * America/New_York rather than the server's zone: a UTC render of a Saturday
+ * event stored as midnight local would read as the day before.
+ */
+function formatEventDate(startDate: Date): string {
+  return startDate.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    timeZone: "America/New_York",
+  });
+}
+
 type ApplicationWithRelations = {
   id: string;
   decidedAt: Date | null;
   person: { firstName: string; email: string };
-  event: { name: string; organizerHqUrl: string };
+  event: { name: string; startDate: Date; organizerHqUrl: string };
 };
 
 async function isStillAccepted(expected: ApplicationWithRelations): Promise<boolean> {
@@ -189,10 +209,12 @@ async function isStillAccepted(expected: ApplicationWithRelations): Promise<bool
     (application.decidedAt?.getTime() ?? null) === (expected.decidedAt?.getTime() ?? null);
 }
 
+type SendOutcome = "SENT" | "STALE_ACCEPTANCE" | "STALE_REMINDER";
+
 async function sendOne(
   emailType: EmailType,
   application: ApplicationWithRelations | null,
-): Promise<"SENT" | "STALE_ACCEPTANCE"> {
+): Promise<SendOutcome> {
   if (!application) {
     if (emailType === "ACCEPTED") return "STALE_ACCEPTANCE";
     throw new Error("Application missing for queued email");
@@ -257,6 +279,39 @@ async function sendOne(
         react: RejectedEmail({ firstName: person.firstName, eventName: event.name }),
       });
       return "SENT";
+    case "MLH_REMINDER": {
+      // Re-read eligibility. There's no credential to invalidate here, but the
+      // message says "your spot is confirmed" and "we can't check you in
+      // without it" — both false for someone who has since declined their RSVP
+      // or had their acceptance withdrawn. Queueing a batch and draining it
+      // are minutes to days apart (every 15 min, 20 at a time, and longer
+      // still once Resend's daily cap spreads it across days), and RSVP
+      // declines arrive continuously through that window. Nothing cancels
+      // pending reminder rows on withdrawal, so this is the only guard.
+      const current = await prisma.application.findUnique({
+        where: { id: application.id },
+        select: { status: true, source: true, rsvpStatus: true },
+      });
+      if (
+        !current ||
+        current.status !== "ACCEPTED" ||
+        current.source === "WALK_IN" ||
+        current.rsvpStatus === "DECLINED"
+      ) {
+        return "STALE_REMINDER";
+      }
+      await sendEmail({
+        to: person.email,
+        subject: `Register with MLH before ${event.name}`,
+        react: MlhReminderEmail({
+          firstName: person.firstName,
+          eventName: event.name,
+          eventDate: formatEventDate(event.startDate),
+          organizerHqUrl: event.organizerHqUrl,
+        }),
+      });
+      return "SENT";
+    }
     default: {
       // Exhaustiveness check: a new EmailType with no case here is a
       // compile error, not a row silently stuck at SENDING forever.

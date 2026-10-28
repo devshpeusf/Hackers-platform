@@ -43,6 +43,14 @@ export const ADMIN_TOOLS: readonly AdminTool[] = [
     color: "var(--color-accent-pink)",
   },
   {
+    href: "/admin/applications/remind",
+    label: "MLH reminder",
+    title: "MLH REMINDER",
+    description: "Nudge accepted hackers to finish MLH registration before the event.",
+    access: "organizer",
+    color: "var(--color-accent-amber)",
+  },
+  {
     href: "/admin/email",
     label: "Email hackers",
     title: "EMAIL HACKERS",

@@ -8,6 +8,7 @@ import SearchBox from "./search-box";
 import type { ApplicationStatus, RsvpStatus } from "@/generated/prisma/client";
 import { STATUS_STYLE, STATUSES, parseStatus, RSVP_LABEL } from "./status";
 import { DECISIONS, decisionLocked, needsAnnouncement } from "@/lib/decisions";
+import { needsMlhReminder } from "@/lib/reminders";
 import { decideApplication } from "./actions";
 import { BulkDecideBar, SelectAll } from "./bulk-decide";
 import { BULK_FORM_ID } from "./bulk-form";
@@ -206,11 +207,17 @@ export default async function AdminApplicationsPage({
     // shouldn't change because someone typed a name in the search box.
     prisma.application.findMany({
       where: { eventId: event.id, status: { not: "SUBMITTED" } },
-      select: { status: true, source: true, emailQueue: { select: { emailType: true } } },
+      select: {
+        status: true,
+        source: true,
+        rsvpStatus: true,
+        emailQueue: { select: { emailType: true } },
+      },
     }),
   ]);
 
   const unannounced = decided.filter((d) => needsAnnouncement(d.status, d.source, d.emailQueue)).length;
+  const unreminded = decided.filter((d) => needsMlhReminder(d)).length;
 
   const countByStatus = Object.fromEntries(STATUSES.map((s) => [s, 0])) as Record<(typeof STATUSES)[number], number>;
   const rsvpCounts: Record<RsvpStatus, number> = { PENDING: 0, CONFIRMED: 0, DECLINED: 0 };
@@ -278,6 +285,24 @@ export default async function AdminApplicationsPage({
             {unannounced === 1 ? "decision hasn't" : "decisions haven't"} been emailed yet.
           </span>
           <span className="font-pixel text-[9px] tracking-widest text-accent-pink">SEND DECISIONS &rarr;</span>
+        </Link>
+      )}
+
+      {/* Separate from the decisions banner: this is a logistics nudge to people
+          already accepted, not part of deciding. Also disappears once sent. */}
+      {unreminded > 0 && (
+        <Link
+          href="/admin/applications/remind"
+          className="mb-5 flex flex-wrap items-center justify-between gap-3 border-2 border-accent-amber bg-accent-amber/6 px-4 py-3 transition-colors hover:bg-accent-amber/12"
+        >
+          <span className="text-[13px] leading-[1.7] text-text-secondary">
+            <strong className="text-text-primary">{unreminded}</strong> accepted{" "}
+            {unreminded === 1 ? "hacker hasn't" : "hackers haven't"} been reminded to register with
+            MLH.
+          </span>
+          <span className="font-pixel text-[9px] tracking-widest text-accent-amber">
+            SEND REMINDER &rarr;
+          </span>
         </Link>
       )}
 

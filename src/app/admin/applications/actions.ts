@@ -19,6 +19,7 @@ import {
   planBulkDecision,
   canQueueRsvpInvitation,
 } from "@/lib/decisions";
+import { needsMlhReminder } from "@/lib/reminders";
 import type { EmailType } from "@/generated/prisma/client";
 
 /**
@@ -380,4 +381,64 @@ export async function queueDecisionEmails(formData: FormData) {
   const params = new URLSearchParams({ queued: String(queued.count) });
   if (blocked) params.set("blocked", String(blocked));
   redirect(`${back}${back.includes("?") ? "&" : "?"}${params}`);
+}
+
+/**
+ * Queues the week-before MLH registration reminder (PLAT-26).
+ *
+ * Same shape as queueDecisionEmails: inserts PENDING rows and lets
+ * /api/jobs/send-queued do the sending, so a Resend outage or the daily cap
+ * costs nothing here. @@unique([applicationId, emailType]) plus skipDuplicates
+ * means a double submit can't email anyone twice.
+ *
+ * No `id` variant. Unlike a decision, there's no per-person moment that calls
+ * for this — it's one batch on one day, and a single-person reminder would just
+ * be a way to spend somebody's one reminder early.
+ */
+export async function queueMlhReminders(formData: FormData) {
+  const returnTo = safeReturnTo(formData.get("returnTo"));
+
+  const organizer = await currentOrganizer();
+  if (!organizer) return;
+
+  const event = await prisma.event.findFirst({ orderBy: { startDate: "desc" } });
+  if (!event) return;
+
+  const candidates = await prisma.application.findMany({
+    where: { eventId: event.id, status: "ACCEPTED" },
+    select: {
+      id: true,
+      status: true,
+      source: true,
+      rsvpStatus: true,
+      emailQueue: { select: { emailType: true } },
+    },
+  });
+
+  const rows = candidates
+    .filter(needsMlhReminder)
+    .map((a) => ({ applicationId: a.id, emailType: "MLH_REMINDER" as EmailType }));
+
+  const back = returnTo ?? "/admin/applications/remind";
+
+  // The page submitted how many people it listed. If that's changed — someone
+  // else accepted a batch, or a volunteer registered walk-ins, while this page
+  // sat open — queue nothing and send them back to re-read it. Everyone gets
+  // exactly one reminder ever, so quietly emailing people whose names were
+  // never on screen is not a recoverable mistake.
+  const expected = Number(formData.get("expected"));
+  if (Number.isInteger(expected) && expected !== rows.length) {
+    redirect(`${back}${back.includes("?") ? "&" : "?"}changed=${rows.length}`);
+  }
+
+  const queued = rows.length
+    ? await prisma.emailQueue.createMany({ data: rows, skipDuplicates: true })
+    : { count: 0 };
+
+  revalidatePath("/admin/applications");
+  revalidatePath("/admin/applications/remind");
+  revalidatePath("/admin/email-queue");
+  revalidatePath(back);
+
+  redirect(`${back}${back.includes("?") ? "&" : "?"}queued=${queued.count}`);
 }
