@@ -48,7 +48,6 @@ export const ADMIN_TOOLS: readonly AdminTool[] = [
     title: "EMAIL HACKERS",
     description: "Send an announcement to a group, like everyone accepted.",
     access: "organizer",
-    soon: true,
     color: "var(--color-accent-purple-light)",
   },
   {

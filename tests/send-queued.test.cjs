@@ -156,6 +156,8 @@ function setup({ types = ["ACCEPTED"], afterSnapshot, beforeTokenLock, afterToke
     return { id: "mock-delivery" };
   };
   const worker = load("src/app/api/jobs/send-queued/route.ts", {
+    // Announcements (tests/broadcast.test.cjs covers them): none queued here.
+    "@/lib/broadcast-sender": { sendBroadcastBatch: async () => ({ attempted: 0, sent: 0, failed: 0, remaining: 0, quotaHit: false }) },
     ...templates,
     "@emails/AcceptedEmail": { __esModule: true, default: (props) => { calls.acceptedProps.push(props); return accepted(props); } },
     "next/server": { NextResponse: { json: (body, init) => ({ body, status: init?.status ?? 200 }) } },
@@ -172,6 +174,13 @@ function setup({ types = ["ACCEPTED"], afterSnapshot, beforeTokenLock, afterToke
     });
     const surfaces = JSON.stringify({ queue: db.queue, logs: calls.logs, response: result });
     for (const raw of calls.generated) assert.ok(!surfaces.includes(raw), "Raw credential leaked to a database row, log, or response");
+    // The job also reports announcement counts (tests/broadcast.test.cjs). The
+    // announcement sender is stubbed to zero here, so drop that field and keep
+    // these transactional-email comparisons exact.
+    if (result?.body && typeof result.body === "object" && "broadcasts" in result.body) {
+      const { broadcasts: _broadcasts, ...transactional } = result.body;
+      return { ...result, body: transactional };
+    }
     return result;
   };
   return { db, env, calls, helper, run };
@@ -436,6 +445,8 @@ test("all email previews render without any database/provider dependency; accept
   const env = { NODE_ENV: "development", RSVP_URL: "https://must-not-appear.example.invalid/rsvp" };
   const preview = load("src/app/api/preview-email/route.tsx", {
     ...templates, "react/jsx-runtime": jsx, "@react-email/render": { render },
+    // The announcement preview (tests/broadcast.test.cjs); not one of the types checked here.
+    "@emails/AnnouncementEmail": { __esModule: true, default: Object.assign(() => null, { PreviewProps: {} }) },
   }, { process: { env }, Response });
   for (const type of ["confirmation", "accepted", "waitlisted", "rejected"]) {
     const response = await preview.GET({ nextUrl: new URL(`http://localhost/api/preview-email?type=${type}`) });
