@@ -83,9 +83,14 @@ test("a Discord identity without a Person row has no staff access", async () => 
 });
 
 test("a role lookup failure propagates instead of granting access", async () => {
-  const modules = { "@/lib/prisma": { prisma: { person: {
-    findUnique: async () => { throw new Error("DATABASE_UNAVAILABLE"); },
-  } } } };
+  const modules = {
+    "next/navigation": { notFound: () => { throw new Error("NOT_FOUND"); }, redirect: (url) => { throw new Error(`REDIRECT:${url}`); } },
+    "@/lib/supabase/server": { createClient: async () => assert.fail("isVolunteerOrAbove takes the ID directly") },
+    "@/lib/supabase/user": userLib,
+    "@/lib/prisma": { prisma: { person: {
+      findUnique: async () => { throw new Error("DATABASE_UNAVAILABLE"); },
+    } } },
+  };
   const { isVolunteerOrAbove } = load("src/lib/volunteer.ts", modules);
   await assert.rejects(isVolunteerOrAbove("discord-me"), /DATABASE_UNAVAILABLE/);
 });
