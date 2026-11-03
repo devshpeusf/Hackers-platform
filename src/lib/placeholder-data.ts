@@ -144,6 +144,23 @@ export const applicationCopy = {
   heading: "LET'S GET YOU\nSIGNED UP",
   /** Was "Answers save as you go" — we don't persist drafts, so it was a lie. */
   footerHint: "Nothing is submitted until the last step",
+  /**
+   * Shown on /apply only when sign-in comes back with ?error=. Calm on
+   * purpose: most failures are fixed by simply trying again. The browser tip
+   * is the one case a retry in the same place won't fix.
+   */
+  signInProblem: {
+    failed: {
+      title: "Sign-in didn't complete",
+      body: "Please try again below.",
+      tip: "If you opened this link inside Discord or Instagram, open it in Safari or Chrome instead.",
+    },
+    cancelled: {
+      title: "Sign-in was cancelled",
+      body: "Sign in with Discord below whenever you're ready.",
+      tip: null,
+    },
+  },
   /** Placeholder questions \u2014 real copy is still a content decision. */
   questions: [
     "Why do you want to attend HackJam '26?",
