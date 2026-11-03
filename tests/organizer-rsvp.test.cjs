@@ -189,7 +189,7 @@ function setup({ applications = [app()], emails = [], organizer = true, signedIn
   });
   const actions = load("src/app/admin/applications/actions.ts", {
     "@/lib/prisma": { prisma }, "@/lib/rsvp": rsvp, "@/lib/badge": badge, "@/lib/site-url": siteUrl, "@/lib/decisions": decisions,
-    "@/lib/supabase/server": auth, "@/lib/supabase/user": userLib,
+    "@/lib/supabase/server": auth, "@/lib/supabase/user": userLib, "@/lib/reminders": load("src/lib/reminders.ts", {}),
     "next/cache": { revalidatePath: () => {} }, "next/navigation": { redirect: (url) => { throw new Error(`REDIRECT:${url}`); } },
   }, { process: { env }, Date: ServerDate, URLSearchParams });
   const runAction = async (name, fields) => {
@@ -201,6 +201,7 @@ function setup({ applications = [app()], emails = [], organizer = true, signedIn
   const pageModules = {
     "react/jsx-runtime": jsx, "next/link": link, "@/lib/prisma": { prisma }, "@/lib/clsx": clsx,
     "@/lib/decisions": decisions, "@/components/ui/PixelCard": card, "@/components/ui/PixelChip": chip,
+    "@/lib/reminders": load("src/lib/reminders.ts", {}),
     "@/lib/organizer": load("src/lib/organizer.ts", {
       "@/lib/prisma": { prisma }, "@/lib/supabase/server": auth, "@/lib/supabase/user": userLib,
       "next/navigation": {
@@ -221,6 +222,7 @@ function setup({ applications = [app()], emails = [], organizer = true, signedIn
     "@/lib/prisma": { prisma }, "@/lib/rsvp": rsvp, "@/lib/site-url": siteUrl,
     "@/lib/email": { sendEmail: async (args) => { calls.sends.push(args); return { id: "mock-delivery" }; } },
     "@emails/AcceptedEmail": accepted, "@emails/ConfirmationEmail": other, "@emails/WaitlistedEmail": other, "@emails/RejectedEmail": other,
+    "@emails/MlhReminderEmail": other,
     "next/server": { NextResponse: { json: (body) => body } },
   }, { process: { env }, Date: ServerDate, setTimeout: (fn) => fn(), console: { ...noLogs, error: (...args) => calls.logs.push(args) } });
   const runWorker = () => worker.POST({ headers: new Headers({ authorization: "Bearer mock-cron" }) });

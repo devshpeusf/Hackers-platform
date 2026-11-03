@@ -33,7 +33,7 @@ function load(path, modules, globals = {}) {
 
 const siteUrl = load("src/lib/site-url.ts", {}, { URL });
 const shared = load("emails/_shared.tsx", { "react/jsx-runtime": jsx, "@react-email/components": require("@react-email/components") });
-const templates = Object.fromEntries(["Confirmation", "Accepted", "Waitlisted", "Rejected"].map((name) => [
+const templates = Object.fromEntries(["Confirmation", "Accepted", "Waitlisted", "Rejected", "MlhReminder"].map((name) => [
   `@emails/${name}Email`, load(`emails/${name}Email.tsx`, {
     "react/jsx-runtime": jsx, "@react-email/components": require("@react-email/components"), "./_shared": shared,
   }),
@@ -476,7 +476,7 @@ test("queueing an acceptance only inserts an EmailQueue row, without issuing a c
     "@/lib/supabase/server": { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: {
       identities: [{ provider: "discord", identity_data: { sub: "organizer" } }],
     } } }) } }) },
-    "@/lib/supabase/user": user, "@/lib/decisions": decisions,
+    "@/lib/supabase/user": user, "@/lib/decisions": decisions, "@/lib/reminders": load("src/lib/reminders.ts", {}),
     "@/lib/rsvp": { revokeRsvpTokens: () => assert.fail("Queueing must not revoke or issue credentials") },
     "@/lib/badge": { ensureBadgeToken: () => assert.fail("Queueing must not issue a badge") },
     "@/lib/site-url": siteUrl,

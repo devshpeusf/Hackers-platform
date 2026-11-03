@@ -122,6 +122,7 @@ function setup({ role = "ORGANIZER", apps } = {}) {
     } } }) } }) },
     "@/lib/supabase/user": userLib,
     "@/lib/decisions": decisions,
+    "@/lib/reminders": load("src/lib/reminders.ts", {}),
     "@/lib/badge": badge,
     "@/lib/rsvp": { revokeRsvpTokens: () => assert.fail("No accepted withdrawal in these fixtures") },
     "@/lib/site-url": {},
