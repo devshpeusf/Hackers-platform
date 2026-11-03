@@ -1,10 +1,10 @@
 import Image from "next/image";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { toApplicantIdentity } from "@/lib/supabase/user";
 import { getApplication } from "@/lib/applications";
 import { landingFor } from "@/lib/portal-access";
+import { signInProblem } from "@/lib/signin-guard";
 import clsx from "@/lib/clsx";
 import DiscordIcon from "@/components/ui/DiscordIcon";
 import { applicationCopy } from "@/lib/placeholder-data";
@@ -14,7 +14,7 @@ import { STARFIELD, Dots } from "../_shared";
  * The landing screen someone reaches from "Register Now" on hackjam26.com.
  *
  * A SERVER COMPONENT on purpose. This screen has exactly one action, and a
- * <Link> performs it with no JavaScript at all — so the button is live the
+ * plain link performs it with no JavaScript at all — so the button is live the
  * instant the page paints. Previously this lived inside the client wizard,
  * which meant ~491KB of step components, fields and the school picker had to
  * download and hydrate before one button would respond.
@@ -22,8 +22,17 @@ import { STARFIELD, Dots } from "../_shared";
  * The button links to /auth/signin, a GET route that asks Supabase for the
  * Discord OAuth URL server-side and redirects to it — so sign-in is a plain
  * navigation with no client JavaScript involved at all.
+ *
+ * The button is an <a>, NOT a Next <Link>: <Link> prefetches its target, and
+ * each request to /auth/signin replaces the one-time sign-in secret cookie.
+ * A prefetch landing after the real click made the callback fail and bounced
+ * people back here. See src/app/auth/signin/route.ts.
  */
-export default async function ApplyLandingPage() {
+export default async function ApplyLandingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string | string[] }>;
+}) {
   // This is where everyone arrives — "Register Now" on hackjam26.com, a
   // bookmark, or just the domain. Without this check someone who had already
   // applied was shown "LET'S GET YOU SIGNED UP" and had to sign in again,
@@ -43,6 +52,10 @@ export default async function ApplyLandingPage() {
     // Accepted hackers go straight to their dashboard; see landingFor.
     redirect(landingFor(await getApplication(discordId)));
   }
+
+  // Only set when the sign-in routes send someone back with ?error=.
+  const problem = signInProblem((await searchParams).error);
+  const problemCopy = problem ? applicationCopy.signInProblem[problem] : null;
 
   return (
     <div className={clsx("flex min-h-screen flex-col px-6 py-6 md:px-11 md:py-9", STARFIELD)}>
@@ -81,7 +94,21 @@ export default async function ApplyLandingPage() {
           <Dots />
         </div>
 
-        <Link
+        {problemCopy && (
+          <div
+            role="status"
+            className="mb-7 w-full max-w-[420px] border-l-[3px] border-accent-amber bg-accent-amber/6 px-4 py-3 text-left"
+          >
+            <div className="mb-1.5 font-pixel text-[8px] leading-[1.8] tracking-widest text-accent-amber">
+              {problemCopy.title.toUpperCase()}
+            </div>
+            <p className="text-xs leading-relaxed text-text-muted">{problemCopy.body}</p>
+            {problemCopy.tip && <p className="mt-1.5 text-[11px] leading-relaxed text-text-dim">{problemCopy.tip}</p>}
+          </div>
+        )}
+
+        {/* Plain <a>, not <Link>: must not be prefetched (see above). */}
+        <a
           href="/auth/signin"
           className="pixel-btn-solid inline-flex items-center justify-center gap-2.5 px-5 py-3 font-body text-xs font-bold tracking-wide text-surface-bg sm:gap-3 sm:px-9 sm:py-[18px] sm:text-sm"
         >
@@ -90,7 +117,7 @@ export default async function ApplyLandingPage() {
               it at 44px tall. CSS classes override the width/height attrs. */}
           <DiscordIcon size={20} className="h-[18px] w-[18px] sm:h-5 sm:w-5" />
           SIGN IN WITH DISCORD
-        </Link>
+        </a>
       </div>
     </div>
   );
