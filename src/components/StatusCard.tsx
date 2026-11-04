@@ -16,10 +16,9 @@ import RsvpButtons from "@/components/RsvpButtons";
  * No hooks and no server-only imports, so it renders inside the dashboard's
  * client component as well as in Server Components.
  *
- * `children` is for page-specific rows under the status — the dashboard puts
- * its waiver checklist row there.
+ * `children` is for optional page-specific rows under the status.
  *
- * `event` is optional and only used for wording ("HackJam '26 · Nov 7–8").
+ * `event` is optional and only used for wording ("HackJam '26 · Nov 21").
  */
 export default function StatusCard({
   status,

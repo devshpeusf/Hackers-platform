@@ -131,7 +131,7 @@ function YourTeam({ team }: { team: TeamView }) {
           >
             {savingName ? "SAVING…" : "SAVE"}
           </button>
-          <button type="button" onClick={() => setRenaming(false)} className="card-meta text-text-muted hover:text-text-primary">
+          <button type="button" disabled={savingName} onClick={() => setRenaming(false)} className="card-meta text-text-muted hover:text-text-primary disabled:opacity-50">
             Cancel
           </button>
           <div className="basis-full">
@@ -144,11 +144,14 @@ function YourTeam({ team }: { team: TeamView }) {
           <button
             type="button"
             onClick={() => setRenaming(true)}
-            className="card-meta text-text-muted underline-offset-4 hover:text-text-primary hover:underline"
+            className="pixel-btn-outline bg-surface-bg px-4 py-2.5 font-body text-[12px] font-bold tracking-wide text-text-primary"
           >
-            Rename
+            CHANGE TEAM NAME
           </button>
         </div>
+      )}
+      {!renaming && renameState.status === "ok" && (
+        <p role="status" className="mt-3 card-meta text-accent-teal">Team name updated.</p>
       )}
 
       <ul className="mt-6 flex flex-col">

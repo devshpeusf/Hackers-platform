@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import PixelCard from "@/components/ui/PixelCard";
@@ -35,10 +34,6 @@ type DashboardProps = {
 };
 
 export default function Dashboard({ fullName, status, rsvpStatus, event, diet, badgeSvg, teamName }: DashboardProps) {
-  // The waiver checklist row is the one interactive bit of static state
-  // on this page (mirrors the mockup's toggle) — no persistence.
-  const [waiverDone, setWaiverDone] = useState(false);
-
   return (
     <div>
       <div className="mb-9 flex flex-col-reverse items-start justify-between gap-6 sm:flex-row">
@@ -76,24 +71,7 @@ export default function Dashboard({ fullName, status, rsvpStatus, event, diet, b
 
       <div className="flex flex-col items-start gap-7 lg:flex-row">
         <div className="flex w-full flex-col gap-6 lg:w-[480px] lg:shrink-0">
-          {/* The real status (PLAT-45). The old placeholder ticked off
-              "Confirm attendance" for everyone, which nobody had done. The
-              waiver row is still local-only state until waivers are real. */}
-          <StatusCard status={status} rsvpStatus={rsvpStatus} event={event}>
-            <button
-              type="button"
-              onClick={() => setWaiverDone((v) => !v)}
-              className="nav-row flex items-center justify-between gap-2.5 p-0.5 text-left"
-            >
-              <div className="flex items-center gap-2.5 card-meta text-text-primary">
-                <span className={waiverDone ? "text-accent-teal" : "text-accent-amber"}>
-                  {waiverDone ? "[x]" : "[ ]"}
-                </span>
-                <span className={waiverDone ? "line-through" : ""}>Complete liability waiver</span>
-              </div>
-              <span className="text-[12px] font-bold text-accent-amber">{waiverDone ? "DONE" : "RUN >"}</span>
-            </button>
-          </StatusCard>
+          <StatusCard status={status} rsvpStatus={rsvpStatus} event={event} />
 
           <PixelCard borderColor="var(--color-accent-purple)" className="flex flex-col items-center card-pad">
             <span className="self-start card-title text-accent-purple-light">

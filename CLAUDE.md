@@ -131,9 +131,6 @@ design-reference/             # the original mockup export — read-only referen
   persistence, by design — this is static UI, not a data model. When
   team membership becomes real, this toggle goes away entirely along
   with the placeholder data behind it.
-- **The dashboard waiver checklist row is the one other piece of local
-  UI state** (mirrors the mockup's toggle) — also throwaway, also gone
-  once acceptance status is a real field.
 - Tailwind arbitrary spacing values (`p-6.5`, `gap-4.5`, etc.) are used
   throughout to hit exact mockup pixel values (Tailwind v4 computes
   these dynamically — no config entry needed). Where a value doesn't

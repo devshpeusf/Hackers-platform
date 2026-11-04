@@ -63,7 +63,7 @@ board directly.
 ## Phase 1 — Data layer
 
 - [x] Postgres + Prisma, initial migration `[PLAT-8]`
-- [ ] The actual schema: events, applications, hackers, teams, waivers, meal
+- [ ] The actual schema: events, applications, hackers, teams, meal
       preferences, check-ins `[PLAT-9]`
 - [ ] Seed script for fake testing data `[PLAT-13]`
 - [ ] Transactional email `[PLAT-11]` — the ticket itself says research is
@@ -160,7 +160,6 @@ submit.
       `src/lib/prisma.ts` imports the generated client. Vercel has the env
       vars so the deploy is fine; nobody cloning gets a working build. Two
       lines in the README would fix it. `[no ticket]`
-- [ ] The dashboard waiver checklist toggles local state with no persistence.
 - [ ] Dashboard hardcodes `YOU'RE ACCEPTED / TO HACKJAM '26` and
       `NOT FORMED · FIND TEAMMATES` in JSX instead of `placeholder-data.ts`.
 - [ ] Confirm the mobile sidebar breakpoint with real organizers `[PLAT-32]`
