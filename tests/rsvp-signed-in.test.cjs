@@ -54,7 +54,7 @@ test("the dashboard passes the RSVP answer, so confirmed hackers see it there to
   const page = readFileSync("src/app/(app)/dashboard/page.tsx", "utf8");
   assert.match(page, /rsvpStatus=\{application\.rsvpStatus\}/);
   const dashboard = readFileSync("src/app/(app)/dashboard/Dashboard.tsx", "utf8");
-  assert.match(dashboard, /<StatusCard status=\{status\} rsvpStatus=\{rsvpStatus\} event=\{event\}>/);
+  assert.match(dashboard, /<StatusCard status=\{status\} rsvpStatus=\{rsvpStatus\} event=\{event\}\s*\/?>/);
 });
 
 // ---- recording the answer ----

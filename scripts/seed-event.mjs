@@ -7,9 +7,8 @@
  * Application.eventId is required, so without a row here every submission
  * fails. Idempotent — safe to re-run.
  *
- * Dates are placeholders until the real ones are confirmed; getOpenEvent()
- * treats an event as open while endDate is in the future, so endDate is what
- * closes applications today. A proper application window
+ * getOpenEvent() treats an event as open while endDate is in the future,
+ * so endDate is what closes applications today. A proper application window
  * (applicationOpen / applicationDeadline) belongs on the Event table — see
  * the note in src/lib/events.ts.
  */
@@ -17,8 +16,9 @@ import "dotenv/config";
 import { Client } from "pg";
 
 const NAME = "HackJam '26";
-const START = "2026-11-07T09:00:00Z";
-const END = "2026-11-08T18:00:00Z";
+// November 21, 2026. Preserve the existing stored hours when correcting the date.
+const START = "2026-11-21T09:00:00Z";
+const END = "2026-11-21T18:00:00Z";
 // Same link as placeholder-data.ts's mlhRegistration.url — the confirmation
 // email reads this from the event row instead, so a future event doesn't
 // inherit this one's link the way a hardcoded string would.

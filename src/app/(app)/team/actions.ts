@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { toApplicantIdentity } from "@/lib/supabase/user";
@@ -19,8 +20,9 @@ async function sessionApplication(): Promise<{ applicationId: string; discordUse
   const supabase = await createClient();
   const {
     data: { user },
+    error,
   } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (error || !user) return null;
   const identity = toApplicantIdentity(user);
   if (!identity.discordId) return null;
 
@@ -34,26 +36,34 @@ async function sessionApplication(): Promise<{ applicationId: string; discordUse
   return { applicationId: application.id, discordUsername: identity.username === "unknown" ? null : identity.username };
 }
 
-async function run(action: (s: { applicationId: string; discordUsername: string | null }) => Promise<TeamResult>): Promise<TeamActionState> {
+async function run(
+  action: (s: { applicationId: string; discordUsername: string | null }) => Promise<TeamResult>,
+  navigateOnSuccess = false,
+): Promise<TeamActionState> {
   try {
     const session = await sessionApplication();
     if (!session) return { status: "error", message: "Sign in again to manage your team." };
     const result = await action(session);
     if (!result.ok) return { status: "error", message: result.message };
-    revalidatePath("/team");
-    revalidatePath("/dashboard");
-    return { status: "ok" };
   } catch {
     return { status: "error", message: "Something went wrong. Please try again." };
   }
+
+  revalidatePath("/team");
+  revalidatePath("/dashboard");
+  // Membership changes must land on the updated team view, including when
+  // the form is submitted before JavaScript loads. Next's redirect throws,
+  // so it belongs outside the mutation's try/catch.
+  if (navigateOnSuccess) redirect("/team");
+  return { status: "ok" };
 }
 
 export async function createTeamAction(_: TeamActionState, formData: FormData) {
-  return run((s) => createTeam(s.applicationId, formData.get("name"), s.discordUsername));
+  return run((s) => createTeam(s.applicationId, formData.get("name"), s.discordUsername), true);
 }
 
 export async function joinTeamAction(_: TeamActionState, formData: FormData) {
-  return run((s) => joinTeam(s.applicationId, formData.get("code"), s.discordUsername));
+  return run((s) => joinTeam(s.applicationId, formData.get("code"), s.discordUsername), true);
 }
 
 export async function renameTeamAction(_: TeamActionState, formData: FormData) {
@@ -61,5 +71,5 @@ export async function renameTeamAction(_: TeamActionState, formData: FormData) {
 }
 
 export async function leaveTeamAction(_: TeamActionState) {
-  return run((s) => leaveTeam(s.applicationId));
+  return run((s) => leaveTeam(s.applicationId), true);
 }

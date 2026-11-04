@@ -271,23 +271,41 @@ test("someone not on a team gets no view", async () => {
 
 // ---- actions: the session decides whose team, never the form ----
 
-function actions({ identities = [{ provider: "discord", identity_data: { sub: "discord-me" } }] } = {}) {
+function actions({
+  identities = [{ provider: "discord", identity_data: { sub: "discord-me" } }],
+  authError = null,
+  outcome = { ok: true },
+  failure = null,
+} = {}) {
   const calls = [];
+  const revalidated = [];
+  const redirects = [];
+  const mutate = async (name, args) => {
+    calls.push([name, ...args]);
+    if (failure) throw failure;
+    return outcome;
+  };
   const exports = load("src/app/(app)/team/actions.ts", {
-    "next/cache": { revalidatePath: () => {} },
+    "next/cache": { revalidatePath: (path) => revalidated.push(path) },
+    "next/navigation": { redirect: (path) => {
+      redirects.push(path);
+      const error = new Error("NEXT_REDIRECT");
+      error.location = path;
+      throw error;
+    } },
     "@/lib/prisma": { prisma: { application: { findFirst: async ({ where }) => (where.person.discordId === "discord-me" ? { id: "app-mine" } : null) } } },
     "@/lib/supabase/server": { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: {
       id: "sb", user_metadata: { provider_id: "discord-victim", preferred_username: "me#0" }, identities,
-    } } }) } }) },
+    } }, error: authError }) } }) },
     "@/lib/supabase/user": load("src/lib/supabase/user.ts"),
     "@/lib/teams": {
-      createTeam: async (...a) => { calls.push(["create", ...a]); return { ok: true }; },
-      joinTeam: async (...a) => { calls.push(["join", ...a]); return { ok: true }; },
-      renameTeam: async (...a) => { calls.push(["rename", ...a]); return { ok: true }; },
-      leaveTeam: async (...a) => { calls.push(["leave", ...a]); return { ok: true }; },
+      createTeam: async (...a) => mutate("create", a),
+      joinTeam: async (...a) => mutate("join", a),
+      renameTeam: async (...a) => mutate("rename", a),
+      leaveTeam: async (...a) => mutate("leave", a),
     },
   });
-  return { ...exports, calls };
+  return { ...exports, calls, revalidated, redirects };
 }
 
 function form(fields) {
@@ -298,10 +316,10 @@ function form(fields) {
 
 test("every action acts on the signed-in hacker's own application", async () => {
   const a = actions();
-  await a.createTeamAction({ status: "idle" }, form({ name: "Byte Me", applicationId: "app-victim" }));
-  await a.joinTeamAction({ status: "idle" }, form({ code: "HJ-7K3QPX", applicationId: "app-victim" }));
+  await assert.rejects(a.createTeamAction({ status: "idle" }, form({ name: "Byte Me", applicationId: "app-victim" })), { location: "/team" });
+  await assert.rejects(a.joinTeamAction({ status: "idle" }, form({ code: "HJ-7K3QPX", applicationId: "app-victim" })), { location: "/team" });
   await a.renameTeamAction({ status: "idle" }, form({ name: "X", teamId: "t-victim" }));
-  await a.leaveTeamAction({ status: "idle" });
+  await assert.rejects(a.leaveTeamAction({ status: "idle" }), { location: "/team" });
   assert.deepEqual(plain(a.calls.map((c) => c[1])), ["app-mine", "app-mine", "app-mine", "app-mine"]);
   assert.equal(a.calls[0][3], "me");
 });
@@ -311,6 +329,48 @@ test("no verified identity: nothing happens", async () => {
   const result = await a.createTeamAction({ status: "idle" }, form({ name: "Byte Me" }));
   assert.equal(result.status, "error");
   assert.equal(a.calls.length, 0);
+});
+
+test("creating, joining and leaving redirect to the refreshed team page", async () => {
+  for (const [name, fields] of [["createTeamAction", { name: "Byte Me" }], ["joinTeamAction", { code: "HJ-7K3QPX" }], ["leaveTeamAction", {}]]) {
+    const a = actions();
+    await assert.rejects(a[name]({ status: "idle" }, form(fields)), { location: "/team" });
+    assert.deepEqual(a.revalidated, ["/team", "/dashboard"]);
+    assert.deepEqual(a.redirects, ["/team"]);
+  }
+});
+
+test("renaming refreshes the team and dashboard and returns success to the inline editor", async () => {
+  const a = actions();
+  const result = await a.renameTeamAction({ status: "idle" }, form({ name: "New name" }));
+  assert.equal(result.status, "ok");
+  assert.deepEqual(plain(a.calls), [["rename", "app-mine", "New name"]]);
+  assert.deepEqual(a.revalidated, ["/team", "/dashboard"]);
+  assert.deepEqual(a.redirects, []);
+});
+
+test("a rejected join stays on the form with its error and never redirects", async () => {
+  const a = actions({ outcome: { ok: false, error: "FULL", message: "That team already has 3 members." } });
+  const result = await a.joinTeamAction({ status: "idle" }, form({ code: "HJ-7K3QPX" }));
+  assert.equal(result.status, "error");
+  assert.equal(result.message, "That team already has 3 members.");
+  assert.deepEqual(a.redirects, []);
+  assert.deepEqual(a.revalidated, []);
+});
+
+test("authentication errors and failed writes cannot navigate or report success", async () => {
+  const auth = actions({ authError: new Error("Expired session") });
+  const authResult = await auth.joinTeamAction({ status: "idle" }, form({ code: "HJ-7K3QPX" }));
+  assert.equal(authResult.status, "error");
+  assert.equal(auth.calls.length, 0);
+  assert.deepEqual(auth.redirects, []);
+
+  const failed = actions({ failure: new Error("Internal database detail") });
+  const failedResult = await failed.renameTeamAction({ status: "idle" }, form({ name: "New name" }));
+  assert.equal(failedResult.status, "error");
+  assert.doesNotMatch(failedResult.message, /Internal database detail/);
+  assert.deepEqual(failed.redirects, []);
+  assert.deepEqual(failed.revalidated, []);
 });
 
 test("the team page and dashboard read real teams, not placeholders", () => {
