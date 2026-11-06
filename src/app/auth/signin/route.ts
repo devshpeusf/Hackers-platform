@@ -18,6 +18,10 @@ import { isBackgroundRequest } from "@/lib/signin-guard";
  * button is a plain <a> and not a Next <Link> (which prefetches), and why
  * background requests are turned away below without touching cookies.
  *
+ * ?retry=1 is the callback's one automatic retry (see there). They approved
+ * Discord a moment ago, so prompt=none asks Discord to skip the approval
+ * screen and come straight back.
+ *
  * Requires the Discord provider to be enabled in the Supabase dashboard with
  * the app's client ID and secret — until then this returns provider_disabled.
  */
@@ -39,6 +43,7 @@ export async function GET(request: NextRequest) {
       // and add them to the server later. Discord does NOT return a usable
       // email even with the email scope, which is why the form asks for one.
       scopes: "guilds.join",
+      ...(request.nextUrl.searchParams.get("retry") === "1" ? { queryParams: { prompt: "none" } } : {}),
     },
   });
 

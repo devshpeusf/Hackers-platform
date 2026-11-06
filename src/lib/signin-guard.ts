@@ -7,10 +7,14 @@
  * secret and overwrites the cookie, so any extra request in the background
  * (a link prefetch, a browser preload) can replace the secret Discord's code
  * was made for, and the callback then fails. These helpers let the routes
- * refuse those background requests, and let us log why a sign-in failed.
+ * refuse those background requests, tell the different failures apart, and
+ * show the right message for each.
  */
 
 type HeaderReader = { get(name: string): string | null };
+
+/** Set by the callback when it retries once automatically; stops a loop. */
+export const RETRY_COOKIE = "signin_retry";
 
 /**
  * True for requests a browser or Next.js makes ahead of time rather than
@@ -46,15 +50,57 @@ export function hasCodeVerifier(cookieNames: string[]): boolean {
   return cookieNames.some((name) => name.endsWith("-code-verifier"));
 }
 
-export type SignInProblem = "cancelled" | "failed";
+/**
+ * Why a sign-in didn't finish, in our words. These are the values the
+ * callback puts in /apply?error= and records in SignInFailure.reason.
+ *
+ * - verify_email: the Discord account's email isn't verified, so Supabase
+ *   won't sign them in. Every attempt fails until they verify it.
+ * - no_email: the Discord account has no email at all (signed up by phone).
+ * - cancelled: they pressed Cancel on Discord's screen.
+ * - missing_verifier: the secret cookie didn't come back (in-app browser,
+ *   or the Discord app returned them in a different browser).
+ * - failed: anything else; a retry usually works.
+ */
+export type SignInFailureReason = "verify_email" | "no_email" | "cancelled" | "missing_verifier" | "failed";
 
 /**
- * Maps the ?error= value on /apply to which message to show. Discord sends
- * access_denied when someone presses Cancel; everything else is a sign-in
- * that didn't finish, and gets the same calm "try again" message.
+ * Classifies the error Supabase sends back to the callback. Supabase passes
+ * error (an OAuth-style category), error_code (its own, specific) and
+ * error_description (a sentence). The code and sentence are checked first:
+ * an unverified email arrives looking like a generic error otherwise.
  */
-export function signInProblem(error: string | string[] | undefined): SignInProblem | null {
+export function classifyProviderError(
+  error: string,
+  code: string | null,
+  description: string | null,
+): SignInFailureReason {
+  const text = description ?? "";
+  if (code === "provider_email_needs_verification" || /unverified email/i.test(text)) return "verify_email";
+  if (/error getting user email/i.test(text)) return "no_email";
+  if (error === "access_denied" && (!code || code === "access_denied")) return "cancelled";
+  return "failed";
+}
+
+/** Which message /apply shows. */
+export type SignInProblem = "verify_email" | "no_email" | "cancelled" | "failed" | "signin_required";
+
+/**
+ * Maps /apply's query to a message. ?error= comes from the sign-in routes;
+ * ?signin=required from the pages that need a session, when there isn't one.
+ * Unknown error values get the general "try again" message.
+ */
+export function signInProblem(
+  error: string | string[] | undefined,
+  signin?: string | string[] | undefined,
+): SignInProblem | null {
   const value = Array.isArray(error) ? error[0] : error;
-  if (!value) return null;
-  return value === "access_denied" ? "cancelled" : "failed";
+  if (value) {
+    if (value === "verify_email" || value === "no_email" || value === "cancelled") return value;
+    // Discord's own cancel value, from before the callback translated it.
+    if (value === "access_denied") return "cancelled";
+    return "failed";
+  }
+  const required = Array.isArray(signin) ? signin[0] : signin;
+  return required === "required" ? "signin_required" : null;
 }

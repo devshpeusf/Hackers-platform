@@ -145,11 +145,27 @@ export const applicationCopy = {
   /** Was "Answers save as you go" — we don't persist drafts, so it was a lie. */
   footerHint: "Nothing is submitted until the last step",
   /**
-   * Shown on /apply only when sign-in comes back with ?error=. Calm on
-   * purpose: most failures are fixed by simply trying again. The browser tip
-   * is the one case a retry in the same place won't fix.
+   * Shown on /apply only when sign-in comes back with ?error= (or a page
+   * needed a session: ?signin=required). Calm on purpose, and specific where
+   * we know the cause: the two Discord email cases won't be fixed by trying
+   * again until the person changes something in Discord.
    */
   signInProblem: {
+    verify_email: {
+      title: "Verify your Discord email",
+      body: "Discord hasn't confirmed the email on your account yet. Verify it in Discord (User Settings \u2192 My Account), then sign in again below.",
+      tip: null,
+    },
+    no_email: {
+      title: "Add an email to Discord",
+      body: "Your Discord account doesn't have an email address. Add and verify one in Discord (User Settings \u2192 My Account), then sign in again below.",
+      tip: null,
+    },
+    signin_required: {
+      title: "Please sign in to continue",
+      body: "Sign in with Discord below to pick up where you left off.",
+      tip: "If this keeps happening, make sure cookies are allowed, or open this page in Safari or Chrome.",
+    },
     failed: {
       title: "Sign-in didn't complete",
       body: "Please try again below.",

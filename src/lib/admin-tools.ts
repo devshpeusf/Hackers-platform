@@ -83,6 +83,14 @@ export const ADMIN_TOOLS: readonly AdminTool[] = [
     color: "var(--color-accent-purple-light)",
   },
   {
+    href: "/admin/sign-in-issues",
+    label: "Sign-in issues",
+    title: "SIGN-IN ISSUES",
+    description: "See why Discord sign-ins failed, to help hackers who can't get in.",
+    access: "organizer",
+    color: "var(--color-terminal-red)",
+  },
+  {
     href: "/admin/walk-in",
     label: "Walk-in",
     title: "WALK-IN REGISTRATION",
