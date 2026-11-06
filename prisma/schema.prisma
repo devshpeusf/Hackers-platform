@@ -315,6 +315,31 @@ model EmailQueue {
   @@index([status, createdAt])
 }
 
+/// One Discord sign-in that didn't finish (/admin/sign-in-issues). Kept here
+/// because Vercel's Hobby plan holds runtime logs for an hour and Supabase's
+/// free plan for a day — too short to look into a hacker's report later.
+/// Deliberately no personal data: no Discord id, name, email or full user
+/// agent. Just enough to tell which failure it was.
+model SignInFailure {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  /// What went wrong, in our words (src/lib/signin-guard.ts SignInProblem):
+  /// verify_email, no_email, cancelled, missing_verifier, failed, ...
+  reason      String
+  /// Supabase's own error code and message, when it sent one.
+  code        String?
+  description String?
+  /// Coarse label like "ios/instagram-app" (browserKind), never the full UA.
+  browser     String
+  /// Whether the one-time sign-in secret cookie came back with the callback.
+  verifier    Boolean
+  /// True when this failure triggered the one automatic retry.
+  retried     Boolean @default(false)
+
+  @@index([createdAt])
+}
+
 /// An announcement an organizer sent to a group of hackers (/admin/email).
 /// Separate from EmailQueue, which allows one email of each type per
 /// applicant — announcements repeat. Sent by the same scheduled job, after

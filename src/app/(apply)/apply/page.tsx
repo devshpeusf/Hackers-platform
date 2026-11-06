@@ -31,7 +31,7 @@ import { STARFIELD, Dots } from "../_shared";
 export default async function ApplyLandingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string | string[] }>;
+  searchParams: Promise<{ error?: string | string[]; signin?: string | string[] }>;
 }) {
   // This is where everyone arrives — "Register Now" on hackjam26.com, a
   // bookmark, or just the domain. Without this check someone who had already
@@ -53,8 +53,10 @@ export default async function ApplyLandingPage({
     redirect(landingFor(await getApplication(discordId)));
   }
 
-  // Only set when the sign-in routes send someone back with ?error=.
-  const problem = signInProblem((await searchParams).error);
+  // Only set when the sign-in routes send someone back with ?error=, or a
+  // page that needs a session sent them here with ?signin=required.
+  const { error, signin } = await searchParams;
+  const problem = signInProblem(error, signin);
   const problemCopy = problem ? applicationCopy.signInProblem[problem] : null;
 
   return (
