@@ -100,6 +100,7 @@ function setup({ organizer = true } = {}) {
     "@/lib/event-guide": guide,
     // actions.ts also holds the schedule save (tests/event-schedule.test.cjs).
     "@/lib/event-schedule": load("src/lib/event-schedule.ts"),
+    "@/lib/scan-rules": load("src/lib/scan-rules.ts"),
   });
   return { ...actions, log };
 }

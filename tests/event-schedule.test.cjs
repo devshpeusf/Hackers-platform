@@ -118,6 +118,7 @@ function setup({ organizer = true } = {}) {
     "@/lib/organizer": { isOrganizer: async (id) => organizer && id === "discord-me" },
     "@/lib/event-guide": load("src/lib/event-guide.ts"),
     "@/lib/event-schedule": schedule,
+    "@/lib/scan-rules": load("src/lib/scan-rules.ts"),
   });
   return { ...actions, log };
 }
