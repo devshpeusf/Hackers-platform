@@ -102,9 +102,8 @@ export const ADMIN_TOOLS: readonly AdminTool[] = [
     href: "/admin/check-in",
     label: "Check-in",
     title: "CHECK-IN SCANNER",
-    description: "Scan hackers' QR badges at the door.",
+    description: "Scan hackers' QR badges at the door, at meals and at workshops.",
     access: "staff",
-    soon: true,
     color: "var(--color-accent-pink)",
   },
 ];

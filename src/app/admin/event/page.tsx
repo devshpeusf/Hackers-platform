@@ -7,10 +7,12 @@ import ScheduleForm from "./schedule-form";
 import { parseSchedule } from "@/lib/event-schedule";
 import LocationsForm from "./locations-form";
 import { parseLocations } from "@/lib/event-guide";
+import Checkpoints from "./checkpoints";
 
 /**
  * Organizer editor for the hacker guide (full guide link, parking, wifi, what
- * to bring, code of conduct), its locations, and the schedule. Saves to the current Event row; /guide reads it on the next load.
+ * to bring, code of conduct), its locations, the schedule, and the meals and
+ * workshops the badge scanner scans for. Saves to the current Event row; /guide reads it on the next load.
  * Organizer-only, like the rest of /admin.
  */
 export default async function AdminEventPage() {
@@ -21,6 +23,10 @@ export default async function AdminEventPage() {
     orderBy: { startDate: "desc" },
     select: {
       name: true,
+      checkpoints: {
+        orderBy: { createdAt: "asc" },
+        select: { id: true, name: true, kind: true, _count: { select: { scans: true } } },
+      },
       locations: true,
       parkingInfo: true,
       wifiInfo: true,
@@ -67,6 +73,19 @@ export default async function AdminEventPage() {
               announce it in Discord and fix the time here.
             </p>
             <ScheduleForm initial={parseSchedule(event.schedule)} />
+          </PixelCard>
+        )}
+
+        {event && (
+          <PixelCard className="mt-8 p-6 md:p-8">
+            <h2 className="mb-2 font-pixel text-lg leading-[1.6] text-text-primary">MEALS &amp; WORKSHOPS</h2>
+            <p className="mb-6 text-[13px] leading-[1.7] text-text-muted">
+              What volunteers can scan badges for at /admin/check-in, besides check-in. Each hacker can be scanned once
+              per item. Anything already scanned can be renamed but not deleted.
+            </p>
+            <Checkpoints
+              rows={event.checkpoints.map((c) => ({ id: c.id, name: c.name, kind: c.kind, count: c._count.scans }))}
+            />
           </PixelCard>
         )}
       </div>

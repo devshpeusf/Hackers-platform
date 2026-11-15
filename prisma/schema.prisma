@@ -32,15 +32,15 @@ model Person {
   /// ORGANIZER are assigned by hand in the DB; there's no self-serve
   /// promotion path. Volunteers have event-day staff access only where
   /// explicitly allowed; organizer-only access still requires ORGANIZER.
-  role PersonRole @default(APPLICANT)
+  role            PersonRole @default(APPLICANT)
   /// Who last changed this person's role at /admin/roles, and when — the
   /// audit trail for who handed out staff access. Null for roles set by hand
   /// in the database before that page existed.
   roleChangedAt   DateTime?
   roleChangedById String?
-  roleChangedBy   Person?   @relation("RoleChanger", fields: [roleChangedById], references: [id])
+  roleChangedBy   Person?    @relation("RoleChanger", fields: [roleChangedById], references: [id])
   /// People whose role this organizer changed.
-  roleChanges     Person[]  @relation("RoleChanger")
+  roleChanges     Person[]   @relation("RoleChanger")
 
   /// Announcements this organizer sent (/admin/email).
   broadcastsSent Broadcast[]
@@ -55,7 +55,7 @@ model Person {
   discordUsername String?
   /// Required — MLH's baseline collection includes phone number. Deliberately
   /// NOT unique though: two applicants can legitimately share a number.
-  phoneNum  String
+  phoneNum        String
 
   // One person can have one resume
   resume Resume?
@@ -66,6 +66,10 @@ model Person {
   /// Applications this person decided, when they're an organizer. Empty for
   /// everyone else.
   decisions Application[] @relation("Decider")
+
+  // Staff who checked hackers in and scanned them for meals/workshops.
+  checkIns Application[] @relation("CheckedInBy")
+  scans    Scan[]
 }
 
 model Event {
@@ -113,7 +117,7 @@ model Event {
   /// deploy, so a slip on the day can be fixed live. Empty shows an "in
   /// progress" state. Read through parseSchedule(), which tolerates bad
   /// hand-edited JSON instead of breaking the page.
-  schedule         Json     @default("[]")
+  schedule Json @default("[]")
 
   // One event can have many applications
   applications Application[]
@@ -123,6 +127,9 @@ model Event {
 
   // Announcements sent to this event's hackers (/admin/email).
   broadcasts Broadcast[]
+
+  // Meals and workshops staff scan badges for (/admin/check-in).
+  checkpoints Checkpoint[]
 }
 
 // Resume is its own model for reusability
@@ -189,6 +196,15 @@ model Application {
   /// src/lib/badge.ts), so it doesn't depend on how acceptance is marked.
   /// Only ever rendered for the signed-in owner; never put in a URL.
   badgeToken String? @unique
+
+  /// Arrived at the venue: set by the check-in scanner (/admin/check-in),
+  /// once. Meals and workshops can only be scanned after this.
+  checkedInAt   DateTime?
+  checkedInById String?
+  checkedInBy   Person?   @relation("CheckedInBy", fields: [checkedInById], references: [id])
+
+  /// Meals and workshops this hacker was scanned for.
+  scans Scan[]
 
   /// Required for everyone — a walk-in is still asked which school they're
   /// from, and MLH's 80%-student reporting needs it.
@@ -315,6 +331,49 @@ model EmailQueue {
   @@index([status, createdAt])
 }
 
+/// A meal or workshop that staff scan badges for (/admin/check-in). Check-in
+/// itself isn't one: it's Application.checkedInAt, since "has arrived" is
+/// asked everywhere. Organizers add, rename and delete these on /admin/event.
+model Checkpoint {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id])
+
+  name String
+  kind CheckpointKind
+
+  scans Scan[]
+
+  @@index([eventId])
+}
+
+enum CheckpointKind {
+  MEAL
+  WORKSHOP
+}
+
+/// One hacker scanned at one checkpoint. Once only: the unique pair is what
+/// turns a second scan into "already scanned", even when two volunteers scan
+/// the same badge at the same moment.
+model Scan {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  /// Restrict, not cascade: a checkpoint with scans can't be deleted, so
+  /// meal counts never silently disappear.
+  checkpointId  String
+  checkpoint    Checkpoint  @relation(fields: [checkpointId], references: [id], onDelete: Restrict)
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id])
+
+  scannedById String
+  scannedBy   Person @relation(fields: [scannedById], references: [id])
+
+  @@unique([checkpointId, applicationId])
+}
+
 /// One Discord sign-in that didn't finish (/admin/sign-in-issues). Kept here
 /// because Vercel's Hobby plan holds runtime logs for an hour and Supabase's
 /// free plan for a day — too short to look into a hacker's report later.
@@ -356,7 +415,7 @@ model Broadcast {
   subject  String
   /// Plain text with a little formatting (**bold**, "- " bullets, links) —
   /// see src/lib/broadcast-format.ts. Never raw HTML.
-  body     String @db.Text
+  body     String            @db.Text
 
   sentById String
   sentBy   Person @relation(fields: [sentById], references: [id])

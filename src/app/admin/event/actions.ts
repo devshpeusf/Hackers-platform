@@ -7,6 +7,7 @@ import { toApplicantIdentity } from "@/lib/supabase/user";
 import { isOrganizer } from "@/lib/organizer";
 import { parseGuideForm, parseLocationsForm } from "@/lib/event-guide";
 import { parseScheduleForm } from "@/lib/event-schedule";
+import { parseCheckpointKind, parseCheckpointName } from "@/lib/scan-rules";
 
 export type SaveGuideState =
   | { status: "idle" }
@@ -113,4 +114,50 @@ export async function saveEventLocations(_previous: SaveLocationsState, formData
   revalidatePath("/dashboard");
   revalidatePath("/admin/event");
   return { status: "saved", count: parsed.rows.length };
+}
+
+/**
+ * Meals and workshops the scanner can scan for (/admin/check-in). Organizer
+ * re-checked on each call, event chosen server-side, like the rest of this
+ * file. Plain form actions: the page reloads with the change.
+ */
+async function organizerEventId(): Promise<string | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user || !(await isOrganizer(toApplicantIdentity(user).discordId))) return null;
+  const event = await prisma.event.findFirst({ orderBy: { startDate: "desc" }, select: { id: true } });
+  return event?.id ?? null;
+}
+
+export async function addCheckpoint(formData: FormData): Promise<void> {
+  const eventId = await organizerEventId();
+  const name = parseCheckpointName(formData.get("name"));
+  const kind = parseCheckpointKind(formData.get("kind"));
+  if (!eventId || !name || !kind) return;
+  await prisma.checkpoint.create({ data: { eventId, name, kind } });
+  revalidatePath("/admin/event");
+  revalidatePath("/admin/check-in");
+}
+
+export async function renameCheckpoint(formData: FormData): Promise<void> {
+  const eventId = await organizerEventId();
+  const id = formData.get("id");
+  const name = parseCheckpointName(formData.get("name"));
+  if (!eventId || typeof id !== "string" || !name) return;
+  // Scoped to the current event, so an id from elsewhere changes nothing.
+  await prisma.checkpoint.updateMany({ where: { id, eventId }, data: { name } });
+  revalidatePath("/admin/event");
+  revalidatePath("/admin/check-in");
+}
+
+/** Only while nobody has been scanned for it, so counts never vanish. */
+export async function deleteCheckpoint(formData: FormData): Promise<void> {
+  const eventId = await organizerEventId();
+  const id = formData.get("id");
+  if (!eventId || typeof id !== "string") return;
+  await prisma.checkpoint.deleteMany({ where: { id, eventId, scans: { none: {} } } });
+  revalidatePath("/admin/event");
+  revalidatePath("/admin/check-in");
 }
