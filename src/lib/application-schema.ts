@@ -133,8 +133,14 @@ function platformLink(platformHost: string, label: string) {
     });
 }
 
-/** MLH requires first name, last name, age, email, school, phone, country, level of study. */
-export const applicationSchema = z.object({
+/**
+ * MLH requires first name, last name, age, email, school, phone, country, level of study.
+ *
+ * The per-field rules, before the cross-field check below. Exported on its
+ * own so the profile editor (src/lib/profile.ts) can pick the fields it lets
+ * hackers change and validate them exactly as the application did.
+ */
+export const applicationFields = z.object({
   // ---- step 1: basics ----
   firstName: z.string({ error: "Required" }).trim().min(1, "Required").max(100),
   lastName: z.string({ error: "Required" }).trim().min(1, "Required").max(100),
@@ -245,7 +251,9 @@ export const applicationSchema = z.object({
   }),
   /** Genuinely optional — MLH marketing email is opt-in. */
   agreedMarketing: z.boolean(),
-}).superRefine((data, ctx) => {
+});
+
+export const applicationSchema = applicationFields.superRefine((data, ctx) => {
   // Cross-field: can't express "dietOther is required, but only when diet
   // is 'Other'" on either field alone, since each needs the other's value.
   if (data.diet === "Other" && !data.dietOther) {
