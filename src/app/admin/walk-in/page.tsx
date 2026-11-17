@@ -7,6 +7,7 @@ import PixelCard from "@/components/ui/PixelCard";
 import PixelChip from "@/components/ui/PixelChip";
 import { STATUS_STYLE } from "../applications/status";
 import { registerWalkIn, admitExisting } from "./actions";
+import { fullyAdmitted } from "@/lib/walk-ins";
 
 /**
  * Registering someone at the door (PLAT-56).
@@ -48,6 +49,8 @@ export default async function WalkInPage({
           source: true,
           createdAt: true,
           badgeToken: true,
+          rsvpStatus: true,
+          checkedInAt: true,
           person: { select: { firstName: true, lastName: true, email: true } },
         },
       })
@@ -66,7 +69,7 @@ export default async function WalkInPage({
         )}
         <h1 className="mb-2 font-pixel text-lg leading-[1.7] text-text-primary">WALK-IN</h1>
         <p className="mb-7 text-[13px] leading-[1.8] text-text-muted">
-          For someone the scanner can&apos;t find. Admits them and issues a badge straight away.
+          For someone the scanner can&apos;t find. Admits them and checks them in straight away.
         </p>
 
         {error === "invalid" && (
@@ -98,18 +101,19 @@ export default async function WalkInPage({
               </span>
             </div>
             <p className="text-[12px] leading-[1.7] text-text-muted">
-              {registered ? "Registered" : "Admitted"} and{" "}
-              {report.badgeToken ? "badge issued" : "badge pending"}. They can open their badge by
-              signing in
-              {canReview ? (
+              {registered ? "Registered" : "Admitted"} and checked in.{" "}
+              {registered
+                ? "Walk-ins don't get a QR to show: at meals and workshops, find them with name search in the scanner."
+                : "They can show the QR on their dashboard, or be found with name search in the scanner."}
+              {canReview && (
                 <>
-                  , or{" "}
+                  {" "}
                   <Link href={`/admin/applications/${report.id}`} className="text-accent-pink hover:underline">
-                    view the record
+                    View the record
                   </Link>
+                  .
                 </>
-              ) : null}
-              .
+              )}
             </p>
           </PixelCard>
         )}
@@ -134,10 +138,10 @@ export default async function WalkInPage({
               event, from {report.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}.
               Nothing was created.
             </p>
-            {report.status === "ACCEPTED" && report.badgeToken ? (
+            {fullyAdmitted(report) ? (
               <p className="text-[12px] leading-[1.7] text-text-secondary">
-                They&apos;re already admitted with a badge &mdash; send them to their dashboard to
-                show the QR.
+                They&apos;re already admitted and checked in &mdash; nothing to do. They can show the QR on
+                their dashboard.
               </p>
             ) : (
               <form action={admitExisting} className="flex flex-wrap items-center gap-3.5">
@@ -146,10 +150,10 @@ export default async function WalkInPage({
                   type="submit"
                   className="pixel-btn-solid px-5 py-3 font-body text-[12px] font-bold tracking-wide text-surface-bg"
                 >
-                  ADMIT &amp; ISSUE BADGE
+                  ADMIT &amp; CHECK IN
                 </button>
                 <span className="text-[11px] leading-[1.6] text-text-faintest">
-                  Changes their decision to accepted.
+                  Accepts them, confirms their RSVP and checks them in.
                 </span>
               </form>
             )}
@@ -209,7 +213,7 @@ export default async function WalkInPage({
             type="submit"
             className="pixel-btn-solid w-full px-5 py-4 font-body text-[13px] font-bold tracking-wide text-surface-bg"
           >
-            REGISTER &amp; ISSUE BADGE
+            REGISTER &amp; CHECK IN
           </button>
         </form>
 
