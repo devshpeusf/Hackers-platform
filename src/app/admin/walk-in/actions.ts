@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { toApplicantIdentity } from "@/lib/supabase/user";
 import { isVolunteerOrAbove } from "@/lib/volunteer";
 import { ensureBadgeToken } from "@/lib/badge";
-import { classifyWalkIn, newWalkInDiscordId, normaliseEmail } from "@/lib/walk-ins";
+import { admitAtDoorChanges, classifyWalkIn, newWalkInDiscordId, normaliseEmail } from "@/lib/walk-ins";
 
 /**
  * Registering someone at the door (PLAT-56).
@@ -125,6 +125,7 @@ export async function registerWalkIn(formData: FormData) {
     back({ found: situation.applicationId });
   }
 
+  const now = new Date();
   const applicationId = await prisma.$transaction(async (tx) => {
     const personId =
       situation.kind === "new-person"
@@ -152,13 +153,20 @@ export async function registerWalkIn(formData: FormData) {
         // person in" without needing a second concept.
         status: "ACCEPTED",
         decidedById: staff.id,
-        decidedAt: new Date(),
+        decidedAt: now,
+        // They're standing at the door: coming, and arrived. Without these the
+        // scanner warns "never confirmed their RSVP" and treats them as not
+        // here yet, so meals would turn them away.
+        rsvpStatus: "CONFIRMED",
+        rsvpRespondedAt: now,
+        checkedInAt: now,
+        checkedInById: staff.id,
         school: fields.school,
         isMinor: fields.isMinor,
         agreedCodeOfConduct: fields.agreedCodeOfConduct,
         agreedDataSharing: fields.agreedDataSharing,
         agreedMarketing: fields.agreedMarketing,
-        agreementsAt: new Date(),
+        agreementsAt: now,
       },
       select: { id: true },
     });
@@ -179,7 +187,9 @@ export async function registerWalkIn(formData: FormData) {
 
 /**
  * Admit someone who already had an application — the rejected-but-showed-up
- * case, or anyone whose badge wouldn't scan.
+ * case, or anyone whose badge wouldn't scan. Accepts them, confirms their RSVP
+ * and checks them in (see admitAtDoorChanges), and makes sure they have a
+ * badge. Only for the current event's applications.
  *
  * Deliberately separate from registerWalkIn: this changes an existing
  * admission decision, which is a different act from creating a record, and it
@@ -193,21 +203,23 @@ export async function admitExisting(formData: FormData) {
   const id = formData.get("applicationId");
   if (typeof id !== "string" || !id) return;
 
-  await prisma.$transaction(async (tx) => {
+  const event = await prisma.event.findFirst({ orderBy: { startDate: "desc" }, select: { id: true } });
+  if (!event) return;
+
+  const admitted = await prisma.$transaction(async (tx) => {
     const application = await tx.application.findUnique({
       where: { id },
-      select: { status: true },
+      select: { eventId: true, status: true, rsvpStatus: true, checkedInAt: true },
     });
-    if (!application) return;
+    // An id from another event (or none) changes nothing.
+    if (!application || application.eventId !== event.id) return false;
 
-    if (application.status !== "ACCEPTED") {
-      await tx.application.update({
-        where: { id },
-        data: { status: "ACCEPTED", decidedById: staff.id, decidedAt: new Date() },
-      });
-    }
+    const changes = admitAtDoorChanges(application, staff.id, new Date());
+    if (changes) await tx.application.update({ where: { id }, data: changes });
     await ensureBadgeToken(id, tx);
+    return true;
   });
+  if (!admitted) return;
 
   revalidatePath("/admin/applications");
   revalidatePath(`/admin/applications/${id}`);

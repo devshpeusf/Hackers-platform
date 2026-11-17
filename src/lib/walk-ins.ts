@@ -74,3 +74,35 @@ export function classifyWalkIn(
   }
   return { kind: "new-application", personId: person.id };
 }
+
+/**
+ * What admitting someone at the door changes on their existing application.
+ *
+ * They're standing at the desk, so all three are true now: they're accepted,
+ * they're coming (whatever they answered by RSVP, including "no"), and
+ * they've arrived. Without the last two the scanner would block someone the
+ * volunteer just admitted ("Declined their spot") or warn about a missing
+ * RSVP. Anything already true is left alone, so an earlier check-in keeps its
+ * original time and volunteer. Null when there's nothing to change.
+ */
+export function admitAtDoorChanges(
+  application: { status: string; rsvpStatus: string; checkedInAt: Date | null },
+  staffId: string,
+  now: Date,
+): Record<string, unknown> | null {
+  const changes: Record<string, unknown> = {};
+  if (application.status !== "ACCEPTED") Object.assign(changes, { status: "ACCEPTED", decidedById: staffId, decidedAt: now });
+  if (application.rsvpStatus !== "CONFIRMED") Object.assign(changes, { rsvpStatus: "CONFIRMED", rsvpRespondedAt: now });
+  if (!application.checkedInAt) Object.assign(changes, { checkedInAt: now, checkedInById: staffId });
+  return Object.keys(changes).length ? changes : null;
+}
+
+/** Whether there's anything left for the door to do for this application. */
+export function fullyAdmitted(application: { status: string; rsvpStatus: string; checkedInAt: Date | null; badgeToken: string | null }): boolean {
+  return (
+    application.status === "ACCEPTED" &&
+    application.rsvpStatus === "CONFIRMED" &&
+    application.checkedInAt !== null &&
+    application.badgeToken !== null
+  );
+}
